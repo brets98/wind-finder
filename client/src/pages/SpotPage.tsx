@@ -2,20 +2,25 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { ForecastView } from '../components/ForecastTable';
 import { LivePanel } from '../components/LivePanel';
+import { SpotHistory } from '../components/SpotHistory';
 import { CompassRose } from '../components/wind';
-import { useI18n } from '../i18n/context';
-import { apiDelete, apiGet, apiPut, ApiError } from '../lib/api';
+import { fill, useI18n } from '../i18n/context';
+import { apiDelete, apiGet, apiPost, apiPut, ApiError } from '../lib/api';
 import type { Spot, SpotForecast } from '../lib/spots';
+import { formatDay, localDate } from '../lib/time';
 import { compassPoint } from '../lib/units';
 
 type Load<T> =
   { status: 'loading' } | { status: 'error'; notFound?: boolean } | { status: 'ok'; data: T };
 
 export function SpotPage({ isAdmin }: { isAdmin: boolean }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { id } = useParams();
   const [spot, setSpot] = useState<Load<Spot>>({ status: 'loading' });
   const [forecast, setForecast] = useState<Load<SpotForecast>>({ status: 'loading' });
+  const [savingDay, setSavingDay] = useState(false);
+  const [dayMessage, setDayMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [historyVersion, setHistoryVersion] = useState(0);
 
   useEffect(() => {
     apiGet<Spot>(`/spots/${id}`)
@@ -50,6 +55,21 @@ export function SpotPage({ isAdmin }: { isAdmin: boolean }) {
     }
   }
 
+  async function saveDay() {
+    setSavingDay(true);
+    setDayMessage(null);
+    try {
+      const date = localDate(new Date());
+      await apiPost(`/spots/${s.id}/days`, { date });
+      setDayMessage({ ok: true, text: fill(t.day.saved, { date: formatDay(date, locale) }) });
+      setHistoryVersion((v) => v + 1);
+    } catch {
+      setDayMessage({ ok: false, text: t.day.saveFailed });
+    } finally {
+      setSavingDay(false);
+    }
+  }
+
   const sectors = (list: Spot['goodDirections']) =>
     list
       .map((x) => `${compassPoint(x.from)}–${compassPoint(x.to)} (${x.from}°–${x.to}°)`)
@@ -80,12 +100,19 @@ export function SpotPage({ isAdmin }: { isAdmin: boolean }) {
             >
               {s.isFavorite ? `★ ${t.spot.unfavorite}` : `☆ ${t.spot.favorite}`}
             </button>
+            <Link to={`/spots/${s.id}/sessions/new`} className="button">
+              {t.session.log}
+            </Link>
+            <button type="button" className="secondary" onClick={saveDay} disabled={savingDay}>
+              {savingDay ? t.day.saving : t.day.save}
+            </button>
             {isAdmin && (
               <Link to={`/admin/spots/${s.id}`} className="button secondary">
                 {t.common.edit}
               </Link>
             )}
           </div>
+          {dayMessage && <p className={dayMessage.ok ? 'message' : 'error'}>{dayMessage.text}</p>}
         </div>
         <CompassRose good={s.goodDirections} avoid={s.avoidDirections} />
       </header>
@@ -128,6 +155,8 @@ export function SpotPage({ isAdmin }: { isAdmin: boolean }) {
       {forecast.status === 'loading' && <p>{t.common.loading}</p>}
       {forecast.status === 'error' && <p className="error">{t.forecast.error}</p>}
       {forecast.status === 'ok' && <ForecastView forecast={forecast.data} />}
+
+      <SpotHistory spotId={s.id} version={historyVersion} />
     </article>
   );
 }

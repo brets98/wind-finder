@@ -1,33 +1,17 @@
-import { Router, type Request, type Response } from 'express';
-import { isValidObjectId, type HydratedDocument } from 'mongoose';
+import { Router } from 'express';
 import { requireAdmin } from '../auth/middleware.js';
 import { dayIndicator, goodHours } from '../domain/good-wind.js';
 import { parseSpot } from '../domain/spot.js';
 import { addDays, localDate } from '../domain/time.js';
 import { favoriteIds, FavoritesModel } from '../models/favorite.js';
-import { ROLES } from '../models/role.js';
 import { getSettings, SettingsModel } from '../models/settings.js';
-import { SpotModel, type Spot, type StationRef } from '../models/spot.js';
+import { SpotModel, type StationRef } from '../models/spot.js';
 import { forecastsFor, marineFor } from '../services/forecasts.js';
 import { importOsmSpots } from '../services/osm-import.js';
 import { isStale, type StationService } from '../services/stations.js';
 import { modelGroup } from '../sources/open-meteo.js';
 import { STATION_SOURCES, type StationSource } from '../sources/types.js';
-
-type SpotDoc = HydratedDocument<Spot>;
-
-const isAdmin = (req: Request) => req.user?.role === ROLES.admin;
-
-/** The spot, if it exists and the user may see it (only admins see spots still to verify). */
-async function findSpot(req: Request, res: Response): Promise<SpotDoc | null> {
-  const { id } = req.params;
-  const spot = isValidObjectId(id) ? await SpotModel.findById(id) : null;
-  if (!spot || (spot.status !== 'verified' && !isAdmin(req))) {
-    res.status(404).json({ error: 'Spot not found' });
-    return null;
-  }
-  return spot;
-}
+import { findSpot, isAdmin } from './helpers.js';
 
 export function spotsRouter(stations: StationService) {
   const router = Router();

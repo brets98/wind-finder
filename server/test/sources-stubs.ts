@@ -36,11 +36,90 @@ export function marine({ dry = [] as number[] } = {}): FakeHandler {
   return (url) => {
     if (!url.toString().startsWith('https://marine-api.open-meteo.com/')) return undefined;
     const lats = url.searchParams.get('latitude')!.split(',').map(Number);
-    const time = [Math.floor(Date.now() / 1000)];
+    // A date range (past days) gets every hour of it, otherwise one value
+    const time = url.searchParams.has('start_date')
+      ? hoursBetween(url.searchParams.get('start_date')!, url.searchParams.get('end_date')!)
+      : [Math.floor(Date.now() / 1000)];
     const one = (lat: number) => {
       const v = dry.includes(lat) ? null : 0.6;
-      return { hourly: { time, wave_height: [v], wave_period: [v], wave_direction: [v] } };
+      const values = time.map(() => v);
+      return { hourly: { time, wave_height: values, wave_period: values, wave_direction: values } };
     };
     return { body: lats.length === 1 ? one(lats[0]) : lats.map(one) };
+  };
+}
+
+/** Every hour (unix seconds, UTC) from `start` 00:00 to `end` 23:00. */
+function hoursBetween(start: string, end: string): number[] {
+  const first = Date.parse(`${start}T00:00:00Z`) / 1000;
+  const last = Date.parse(`${end}T23:00:00Z`) / 1000;
+  const hours = [];
+  for (let t = first; t <= last; t += 3600) hours.push(t);
+  return hours;
+}
+
+/**
+ * A fake Previous Runs API: every requested model, every hour of the dates asked, the latest
+ * run at `speed` knots and the run of the day before at `d1Speed`, both from `dir` degrees.
+ * Models in `noD1` have no previous-day values (e.g. outside their horizon).
+ */
+export function previousRuns({
+  speed = 18,
+  d1Speed = 12,
+  dir = 60,
+  noD1 = [] as string[],
+} = {}): FakeHandler {
+  return (url) => {
+    if (!url.toString().startsWith('https://previous-runs-api.open-meteo.com/')) return undefined;
+    const models = url.searchParams.get('models')!.split(',');
+    const time = hoursBetween(
+      url.searchParams.get('start_date')!,
+      url.searchParams.get('end_date')!,
+    );
+    const hourly: Record<string, (number | null)[]> = { time };
+    for (const model of models) {
+      const suffix = models.length === 1 ? '' : `_${model}`;
+      for (const [variable, value] of [
+        ['wind_speed_10m', speed],
+        ['wind_gusts_10m', speed + 6],
+        ['wind_direction_10m', dir],
+      ] as const) {
+        hourly[`${variable}${suffix}`] = time.map(() => value);
+        hourly[`${variable}_previous_day1${suffix}`] = time.map(() =>
+          noD1.includes(model)
+            ? null
+            : variable === 'wind_direction_10m'
+              ? value
+              : value - (speed - d1Speed),
+        );
+      }
+    }
+    return { body: { hourly } };
+  };
+}
+
+/** A fake Windy station with a reading every 10 minutes from `from` to `to`. */
+export function windyHistory(id: string, from: Date, to: Date, wind = 7.7): FakeHandler {
+  return (url) => {
+    if (
+      !url
+        .toString()
+        .startsWith(`https://stations.windy.com/api/v2/opendata/station/${id}/observation`)
+    ) {
+      return undefined;
+    }
+    const ts: number[] = [];
+    for (let t = from.getTime(); t < to.getTime(); t += 600_000) ts.push(t);
+    return {
+      body: {
+        header: { id, name: `Windy ${id}`, lat: 45.21, lon: 12.3 },
+        data: {
+          ts,
+          wind: ts.map(() => wind),
+          wind_gust: ts.map(() => wind + 3),
+          wind_dir: ts.map(() => 70),
+        },
+      },
+    };
   };
 }

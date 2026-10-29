@@ -6,6 +6,7 @@ import { createAuth } from '../src/auth/auth.js';
 import type { Mail } from '../src/mail/mailer.js';
 import { InviteModel } from '../src/models/invite.js';
 import { UserModel } from '../src/models/user.js';
+import { createDayService } from '../src/services/days.js';
 import { createStationService } from '../src/services/stations.js';
 import { createMeteoNetwork } from '../src/sources/meteonetwork.js';
 import { createWindy } from '../src/sources/windy.js';
@@ -29,7 +30,8 @@ export function createTestApp() {
     meteonetwork: createMeteoNetwork('test-meteonetwork-token'),
     windy: createWindy('test-windy-key'),
   });
-  const app = createApp({ auth, stations });
+  const days = createDayService(stations);
+  const app = createApp({ auth, stations, days });
 
   /** Path + query of the last link emailed to `to`. */
   function lastLink(to: string) {
@@ -40,7 +42,7 @@ export function createTestApp() {
     return pathname + search;
   }
 
-  return { app, auth, stations, mails, lastLink };
+  return { app, auth, stations, days, mails, lastLink };
 }
 
 export type TestApp = ReturnType<typeof createTestApp>;
