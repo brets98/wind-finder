@@ -49,7 +49,7 @@ export interface StationReading {
 }
 
 /** Why a station can't feed a live panel. */
-export type UnusableReason = 'not_available' | 'no_wind' | 'no_data' | 'error';
+export type UnusableReason = 'not_available' | 'no_wind' | 'no_data' | 'stale' | 'error';
 
 export type StationCheck =
   | { usable: true; station: StationInfo; latest: StationReading }

@@ -38,79 +38,104 @@ interface HourlyResponse {
   hourly?: { time: number[] } & Record<string, Value[] | number[]>;
 }
 
-async function getHourly(url: string, params: Record<string, string | number>) {
+type Point = { lat: number; lon: number };
+
+/** One call for one or more points; Open-Meteo answers an array, in order, for several. */
+async function getHourly(url: string, points: Point[], params: Record<string, string | number>) {
   const query = new URLSearchParams(
-    Object.entries({ ...params, timeformat: 'unixtime', timezone: 'GMT' }).map(([k, v]) => [
-      k,
-      String(v),
-    ]),
+    Object.entries({
+      latitude: points.map((p) => p.lat).join(','),
+      longitude: points.map((p) => p.lon).join(','),
+      ...params,
+      timeformat: 'unixtime',
+      timezone: 'GMT',
+    }).map(([k, v]) => [k, String(v)]),
   );
-  const { status, body } = await fetchJson<HourlyResponse>('open-meteo', `${url}?${query}`);
-  if (status !== 200 || body?.error || !body?.hourly) {
-    throw new SourceError('open-meteo', status, body?.reason ?? `HTTP ${status}`);
+  const { status, body } = await fetchJson<HourlyResponse | HourlyResponse[]>(
+    'open-meteo',
+    `${url}?${query}`,
+  );
+  const list = Array.isArray(body) ? body : [body];
+  const failed = !Array.isArray(body) && body?.error;
+  if (status !== 200 || failed || list.length !== points.length || list.some((b) => !b?.hourly)) {
+    throw new SourceError(
+      'open-meteo',
+      status,
+      (!Array.isArray(body) && body?.reason) || `HTTP ${status}`,
+    );
   }
-  const { time, ...series } = body.hourly;
-  return {
-    times: time.map((t) => new Date(t * 1000).toISOString()),
-    series: series as Record<string, Value[]>,
-  };
+  return list.map((b) => {
+    const { time, ...series } = b.hourly!;
+    return {
+      times: time.map((t) => new Date(t * 1000).toISOString()),
+      series: series as Record<string, Value[]>,
+    };
+  });
 }
 
 const values = (list: unknown[] | undefined, length: number): Value[] =>
   list ? list.map(num) : Array<Value>(length).fill(null);
 
-/** Hourly wind (knots) for each model, from today (UTC) for `days` days. */
-export async function fetchForecast(
-  { lat, lon }: { lat: number; lon: number },
+/** Points per call when fetching many spots at once (keeps the URL short). */
+const MAX_POINTS = 50;
+
+/**
+ * Hourly wind (knots) for each model, from today (UTC) for `days` days, for several points
+ * that use the same models, in as few calls as possible. Results are in the order of `points`.
+ */
+export async function fetchForecasts(
+  points: Point[],
   models: readonly string[],
   days = FORECAST_DAYS,
-): Promise<Forecast> {
-  if (models.length === 0) return { times: [], models: [] };
-  const { times, series } = await getHourly(FORECAST_URL, {
-    latitude: lat,
-    longitude: lon,
-    hourly: WIND_VARIABLES.join(','),
-    wind_speed_unit: 'kn',
-    models: models.join(','),
-    forecast_days: days,
-  });
+): Promise<Forecast[]> {
+  if (models.length === 0) return points.map(() => ({ times: [], models: [] }));
   // With a single model Open-Meteo doesn't add the suffix
   const key = (variable: string, model: string) =>
     models.length === 1 ? variable : `${variable}_${model}`;
 
-  return {
-    times,
-    models: models
-      .filter((model) => series[key('wind_speed_10m', model)])
-      .map((model) => ({
-        model,
-        speed: values(series[key('wind_speed_10m', model)], times.length),
-        gust: values(series[key('wind_gusts_10m', model)], times.length),
-        dir: values(series[key('wind_direction_10m', model)], times.length),
-      })),
-  };
+  const results: Forecast[] = [];
+  for (let i = 0; i < points.length; i += MAX_POINTS) {
+    const responses = await getHourly(FORECAST_URL, points.slice(i, i + MAX_POINTS), {
+      hourly: WIND_VARIABLES.join(','),
+      wind_speed_unit: 'kn',
+      models: models.join(','),
+      forecast_days: days,
+    });
+    for (const { times, series } of responses) {
+      results.push({
+        times,
+        models: models
+          .filter((model) => series[key('wind_speed_10m', model)])
+          .map((model) => ({
+            model,
+            speed: values(series[key('wind_speed_10m', model)], times.length),
+            gust: values(series[key('wind_gusts_10m', model)], times.length),
+            dir: values(series[key('wind_direction_10m', model)], times.length),
+          })),
+      });
+    }
+  }
+  return results;
+}
+
+export async function fetchForecast(
+  point: Point,
+  models: readonly string[],
+  days = FORECAST_DAYS,
+): Promise<Forecast> {
+  const [forecast] = await fetchForecasts([point], models, days);
+  return forecast;
 }
 
 /** The candidate models that cover a point: those returning at least some data there. */
-export async function probeModels(point: { lat: number; lon: number }): Promise<ForecastModel[]> {
-  const forecast = await fetchForecast(
-    point,
-    FORECAST_MODELS.map((m) => m.id),
-    3,
-  );
-  return FORECAST_MODELS.map((m) => m.id).filter((id) =>
-    forecast.models.some((m) => m.model === id && m.speed.some((v) => v !== null)),
-  );
+export async function probeModels(point: Point): Promise<ForecastModel[]> {
+  const [models] = await probeModelsMany([point]);
+  return models;
 }
 
 /** Waves (sea spots only), hourly from today (UTC). */
-export async function fetchMarine(
-  { lat, lon }: { lat: number; lon: number },
-  days = FORECAST_DAYS,
-): Promise<MarineForecast> {
-  const { times, series } = await getHourly(MARINE_URL, {
-    latitude: lat,
-    longitude: lon,
+export async function fetchMarine(point: Point, days = FORECAST_DAYS): Promise<MarineForecast> {
+  const [{ times, series }] = await getHourly(MARINE_URL, [point], {
     hourly: 'wave_height,wave_period,wave_direction',
     forecast_days: days,
   });
@@ -120,4 +145,33 @@ export async function fetchMarine(
     wavePeriod: values(series.wave_period, times.length),
     waveDir: values(series.wave_direction, times.length),
   };
+}
+
+/**
+ * Whether the Marine API has waves at each point: it has none on lakes and inland, which
+ * tells sea spots from lake spots when importing (the admin checks it when verifying).
+ */
+export async function hasMarineData(points: Point[]): Promise<boolean[]> {
+  const results: boolean[] = [];
+  for (let i = 0; i < points.length; i += MAX_POINTS) {
+    const responses = await getHourly(MARINE_URL, points.slice(i, i + MAX_POINTS), {
+      hourly: 'wave_height',
+      forecast_days: 1,
+    });
+    results.push(
+      ...responses.map(({ series }) => (series.wave_height ?? []).some((v) => v !== null)),
+    );
+  }
+  return results;
+}
+
+/** For several points at once: the candidate models covering each one. */
+export async function probeModelsMany(points: Point[]): Promise<ForecastModel[][]> {
+  const ids = FORECAST_MODELS.map((m) => m.id);
+  const forecasts = await fetchForecasts(points, ids, 3);
+  return forecasts.map((forecast) =>
+    ids.filter((id) =>
+      forecast.models.some((m) => m.model === id && m.speed.some((v) => v !== null)),
+    ),
+  );
 }

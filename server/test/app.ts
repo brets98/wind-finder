@@ -6,10 +6,16 @@ import { createAuth } from '../src/auth/auth.js';
 import type { Mail } from '../src/mail/mailer.js';
 import { InviteModel } from '../src/models/invite.js';
 import { UserModel } from '../src/models/user.js';
+import { createStationService } from '../src/services/stations.js';
+import { createMeteoNetwork } from '../src/sources/meteonetwork.js';
+import { createWindy } from '../src/sources/windy.js';
 
 export const BASE_URL = 'http://localhost:3000';
 
-/** Builds the app against the test database, capturing emails instead of sending them. */
+/**
+ * Builds the app against the test database, capturing emails instead of sending them.
+ * Sources use fake credentials: stub their HTTP calls with `stubFetch()` (test/fetch.ts).
+ */
 export function createTestApp() {
   const mails: Mail[] = [];
   const auth = createAuth({
@@ -19,7 +25,11 @@ export function createTestApp() {
       mails.push(mail);
     },
   });
-  const app = createApp({ auth });
+  const stations = createStationService({
+    meteonetwork: createMeteoNetwork('test-meteonetwork-token'),
+    windy: createWindy('test-windy-key'),
+  });
+  const app = createApp({ auth, stations });
 
   /** Path + query of the last link emailed to `to`. */
   function lastLink(to: string) {
@@ -30,7 +40,7 @@ export function createTestApp() {
     return pathname + search;
   }
 
-  return { app, auth, mails, lastLink };
+  return { app, auth, stations, mails, lastLink };
 }
 
 export type TestApp = ReturnType<typeof createTestApp>;

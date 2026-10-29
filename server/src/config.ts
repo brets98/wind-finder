@@ -22,6 +22,12 @@ export interface Config {
     baseUrl: string;
     google?: { clientId: string; clientSecret: string };
   };
+  sources: {
+    /** MeteoNetwork STANDARD token (from POST /v3/login); without it MeteoNetwork is off */
+    meteonetworkToken?: string;
+    /** Windy Stations API key; without it Windy stations are off */
+    windyApiKey?: string;
+  };
   smtp: {
     host: string;
     port: number;
@@ -46,6 +52,10 @@ export function loadConfig(): Config {
         googleClientId && googleClientSecret
           ? { clientId: googleClientId, clientSecret: googleClientSecret }
           : undefined,
+    },
+    sources: {
+      meteonetworkToken: optional('METEONETWORK_TOKEN'),
+      windyApiKey: optional('WINDY_API_KEY'),
     },
     smtp: {
       host: required('SMTP_HOST'),

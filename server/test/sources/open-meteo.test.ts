@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fetchForecast, fetchMarine, probeModels } from '../../src/sources/open-meteo.js';
+import {
+  fetchForecast,
+  fetchForecasts,
+  fetchMarine,
+  probeModels,
+} from '../../src/sources/open-meteo.js';
 import { on, stubFetch } from '../fetch.js';
 
 const sottomarina = { lat: 45.2, lon: 12.31 };
@@ -91,6 +96,31 @@ describe('Open-Meteo adapter', () => {
       'ecmwf_ifs',
       'gfs_seamless',
     ]);
+  });
+
+  it('fetches several points with the same models in one call, in order', async () => {
+    const hourly = (speed: number) => ({
+      hourly: {
+        time,
+        wind_speed_10m_ecmwf_ifs: [speed, speed, speed],
+        wind_speed_10m_gfs_seamless: [1, 1, 1],
+      },
+    });
+    const fetchMock = stubFetch(
+      on('https://api.open-meteo.com/', { body: [hourly(10), hourly(20)] }),
+    );
+
+    const [a, b] = await fetchForecasts(
+      [sottomarina, { lat: 41.18, lon: 9.32 }],
+      ['ecmwf_ifs', 'gfs_seamless'],
+    );
+
+    expect(a.models[0].speed).toEqual([10, 10, 10]);
+    expect(b.models[0].speed).toEqual([20, 20, 20]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const url = new URL(fetchMock.mock.calls[0][0] as string);
+    expect(url.searchParams.get('latitude')).toBe('45.2,41.18');
+    expect(url.searchParams.get('longitude')).toBe('12.31,9.32');
   });
 
   it('fails on an Open-Meteo error', async () => {
