@@ -825,3 +825,294 @@ fieldset.sectors {
 .about h2 {
   font-size: 1.1rem;
 }
+
+/* --- Wind chart: validated categorical slots 1-4 (light / dark) --- */
+
+:root {
+  --series-d0: #2a78d6;
+  --series-observed: #eb6834;
+  --series-d1: #1baf7a;
+  --series-perceived: #eda100;
+  --chart-grid: #9ca3af40;
+  --chart-text: #52514e;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --series-d0: #3987e5;
+    --series-observed: #d95926;
+    --series-d1: #199e70;
+    --series-perceived: #c98500;
+    --chart-text: #c3c2b7;
+  }
+}
+
+.wind-chart {
+  margin: 0.5rem 0;
+}
+
+.chart-title {
+  font-size: 0.8rem;
+  color: var(--chart-text);
+  margin-bottom: 0.25rem;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.25rem;
+  font-size: 0.8rem;
+  color: var(--chart-text);
+}
+
+.chart-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.chart-plot {
+  position: relative;
+}
+
+.chart-plot svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: pan-y;
+}
+
+.wind-chart .grid {
+  stroke: var(--chart-grid);
+  stroke-width: 1;
+}
+
+.wind-chart .axis-label {
+  font-size: 11px;
+  fill: var(--chart-text);
+}
+
+.wind-chart.compact .axis-label {
+  font-size: 13px;
+}
+
+.line-d0,
+.line-observed,
+.line-d1 {
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.line-d0 {
+  stroke: var(--series-d0);
+}
+
+.line-observed {
+  stroke: var(--series-observed);
+}
+
+.line-d1 {
+  stroke: var(--series-d1);
+  stroke-dasharray: 5 4;
+}
+
+.band-perceived {
+  fill: var(--series-perceived);
+  opacity: 0.85;
+}
+
+.dot-d0,
+.dot-observed,
+.dot-d1 {
+  stroke: Canvas;
+  stroke-width: 2;
+}
+
+.dot-d0 {
+  fill: var(--series-d0);
+}
+
+.dot-observed {
+  fill: var(--series-observed);
+}
+
+.dot-d1 {
+  fill: var(--series-d1);
+}
+
+.wind-chart .crosshair {
+  stroke: var(--chart-text);
+  stroke-width: 1;
+  opacity: 0.6;
+}
+
+.chart-tooltip {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.375rem;
+  border: 1px solid var(--border);
+  background: Canvas;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  z-index: 2;
+}
+
+.tooltip-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.chart-table td,
+.chart-table th {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.8rem;
+}
+
+/* --- Sessions, history, board --- */
+
+fieldset.rating,
+fieldset.choice {
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  align-items: center;
+}
+
+.star {
+  flex-direction: row;
+  cursor: pointer;
+  font-size: 1.6rem;
+  color: #eab308;
+}
+
+.star input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.star input:focus-visible + span {
+  outline: 2px solid var(--accent);
+  border-radius: 0.25rem;
+}
+
+.history {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.history > li {
+  border-bottom: 1px solid var(--border);
+}
+
+.history-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  align-items: center;
+  width: 100%;
+  padding: 0.6rem 0.25rem;
+  background: none;
+  color: inherit;
+  text-align: left;
+  border-radius: 0;
+}
+
+.history-row:hover {
+  background: var(--hover);
+}
+
+.history-date {
+  font-weight: 600;
+  min-width: 7rem;
+}
+
+.day-view {
+  padding: 0.5rem 0 1rem;
+}
+
+.inline-label {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.session-summary {
+  padding: 0.5rem 0;
+}
+
+.session-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  align-items: baseline;
+}
+
+.stars {
+  color: #eab308;
+  letter-spacing: 0.05em;
+}
+
+.session-edit {
+  margin-left: auto;
+  color: var(--accent);
+  font-size: 0.875rem;
+}
+
+.session-comment {
+  margin: 0.25rem 0 0;
+  white-space: pre-wrap;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.filters label {
+  flex: 1 1 12rem;
+}
+
+.board {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+  gap: 1rem;
+}
+
+.board-card {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+}
+
+.board-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+.board-card-head a {
+  color: inherit;
+}

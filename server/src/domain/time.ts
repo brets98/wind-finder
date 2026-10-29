@@ -19,3 +19,14 @@ export function addDays(date: string, days: number): string {
   d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
 }
+
+/** The start (UTC) of every hour of a local date: 24, or 23/25 when the clocks change. */
+export function localHours(date: string): string[] {
+  const hours: string[] = [];
+  const first = Date.parse(`${addDays(date, -1)}T00:00:00Z`);
+  for (let i = 0; i < 72; i++) {
+    const instant = new Date(first + i * 3_600_000);
+    if (localDate(instant) === date) hours.push(instant.toISOString());
+  }
+  return hours;
+}

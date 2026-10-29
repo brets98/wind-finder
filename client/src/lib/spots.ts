@@ -3,7 +3,7 @@
 export type SpotType = 'sea' | 'lake';
 export type SpotStatus = 'to_verify' | 'verified';
 export type Indicator = 'yes' | 'maybe' | 'no';
-export type StationSource = 'meteonetwork' | 'windy';
+export type StationSource = 'meteonetwork' | 'windy' | 'metar' | 'arpav';
 export type Value = number | null;
 
 export interface Sector {

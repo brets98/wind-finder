@@ -30,7 +30,7 @@ export interface MarineForecast {
   waveDir: Value[];
 }
 
-export const STATION_SOURCES = ['meteonetwork', 'windy'] as const;
+export const STATION_SOURCES = ['meteonetwork', 'windy', 'metar', 'arpav'] as const;
 export type StationSource = (typeof STATION_SOURCES)[number];
 
 export interface StationInfo {
@@ -54,6 +54,17 @@ export type UnusableReason = 'not_available' | 'no_wind' | 'no_data' | 'stale' |
 export type StationCheck =
   | { usable: true; station: StationInfo; latest: StationReading }
   | { usable: false; reason: UnusableReason; station?: StationInfo; latest?: StationReading };
+
+/**
+ * What every live-station source provides. `history` (readings between two instants, oldest
+ * first; null when the station is unknown) and `nearby` (stations within a radius) only where
+ * the source allows them.
+ */
+export interface StationAdapter {
+  check(stationId: string): Promise<StationCheck>;
+  history?(stationId: string, from: Date, to: Date): Promise<StationReading[] | null>;
+  nearby?(point: { lat: number; lon: number }, radiusKm: number): Promise<StationInfo[]>;
+}
 
 export interface SpotCandidate {
   osmId: string;

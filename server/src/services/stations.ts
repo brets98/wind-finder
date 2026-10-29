@@ -2,8 +2,8 @@ import { distanceKm, isInItaly, type LatLon } from '../domain/geo.js';
 import { getSettings } from '../models/settings.js';
 import type { StationRef } from '../models/spot.js';
 import { WindyStationModel } from '../models/windy-station.js';
-import type { MeteoNetwork } from '../sources/meteonetwork.js';
 import type {
+  StationAdapter,
   StationCheck,
   StationInfo,
   StationReading,
@@ -12,9 +12,15 @@ import type {
 } from '../sources/types.js';
 import type { Windy } from '../sources/windy.js';
 
+/**
+ * Every live-station source. Windy is searched by position in its local catalogue
+ * (`windyStations`), the others through their adapter's `nearby` when they have one.
+ */
 export interface StationSources {
-  meteonetwork: MeteoNetwork;
+  meteonetwork: StationAdapter;
   windy: Windy;
+  metar: StationAdapter;
+  arpav: StationAdapter;
 }
 
 /** A reading older than this is stale: flagged on the live panel, hidden from suggestions. */
@@ -23,8 +29,8 @@ export const STALE_MS = 3 * 60 * 60 * 1000;
 export const LIVE_CACHE_MS = 5 * 60 * 1000;
 /** Suggested stations are within this distance of the spot. */
 export const SUGGESTION_RADIUS_KM = 20;
-/** At most this many Windy stations are checked per suggestion (nearest first). */
-const MAX_CHECKED = 15;
+/** At most this many stations are checked per suggestion (nearest first). */
+const MAX_CHECKED = 20;
 
 export function isStale(reading: StationReading, now = new Date()) {
   return now.getTime() - new Date(reading.time).getTime() > STALE_MS;
@@ -99,27 +105,38 @@ export function createStationService(sources: StationSources) {
   }
 
   /**
-   * Stations the admin can choose for a spot: Windy open-data stations within 20 km, nearest
-   * first, each checked for recent wind. MeteoNetwork can't be searched by position with a
-   * STANDARD token: its stations are added by code (`checkStation()`).
+   * Stations the admin can choose for a spot, from every source that can be searched by
+   * position (Windy, METAR airports, ARPAV) within 20 km, nearest first, each checked for
+   * recent wind. MeteoNetwork can't be searched with a STANDARD token: its stations are added
+   * by code (`checkStation()`). A source that fails is left out.
    */
   async function suggestions(spot: LatLon, now = new Date()) {
-    const nearby = (await WindyStationModel.find().lean())
-      .map((s) => ({ ...s, distanceKm: distanceKm(spot, s) }))
+    const windy: StationInfo[] = (await WindyStationModel.find().lean()).map((s) => ({
+      source: 'windy',
+      stationId: s.stationId,
+      name: s.name,
+      lat: s.lat,
+      lon: s.lon,
+    }));
+    const others = await Promise.all(
+      (['metar', 'arpav'] as const).map((source) =>
+        (sources[source].nearby?.(spot, SUGGESTION_RADIUS_KM) ?? Promise.resolve([])).catch(
+          (err: unknown) => {
+            console.error(`Could not search ${source} stations:`, err);
+            return [];
+          },
+        ),
+      ),
+    );
+    const nearby = [...windy, ...others.flat()]
+      .map((s) => ({ info: s, distanceKm: distanceKm(spot, s) }))
       .filter((s) => s.distanceKm <= SUGGESTION_RADIUS_KM)
       .sort((a, b) => a.distanceKm - b.distanceKm)
       .slice(0, MAX_CHECKED);
 
     const results = [];
-    for (const s of nearby) {
-      const info: StationInfo = {
-        source: 'windy',
-        stationId: s.stationId,
-        name: s.name,
-        lat: s.lat,
-        lon: s.lon,
-      };
-      results.push(describe(spot, info, await check('windy', s.stationId, now), now));
+    for (const { info } of nearby) {
+      results.push(describe(spot, info, await check(info.source, info.stationId, now), now));
     }
     return results;
   }
@@ -169,7 +186,28 @@ export function createStationService(sources: StationSources) {
     return { pages: page, stations: italian.size, syncedAt: now };
   }
 
-  return { check, cached, live, suggestions, checkStation, syncWindyCatalogue };
+  /**
+   * A station's readings between two instants, oldest first, where its source keeps history:
+   * Windy and METAR 7 days, ARPAV about 2 days. MeteoNetwork's STANDARD token has none, until
+   * the app keeps its own readings (Phase 3).
+   */
+  async function history(
+    ref: Pick<StationRef, 'source' | 'stationId'>,
+    from: Date,
+    to: Date,
+  ): Promise<{ readings: StationReading[] } | { reason: 'no_history' | 'no_data' | 'error' }> {
+    const adapter: StationAdapter = sources[ref.source];
+    if (!adapter.history) return { reason: 'no_history' };
+    try {
+      const readings = await adapter.history(ref.stationId, from, to);
+      return readings ? { readings } : { reason: 'no_data' };
+    } catch (err) {
+      console.error(`Could not read the history of ${ref.source} ${ref.stationId}:`, err);
+      return { reason: 'error' };
+    }
+  }
+
+  return { check, cached, live, suggestions, checkStation, syncWindyCatalogue, history };
 }
 
 export type StationService = ReturnType<typeof createStationService>;

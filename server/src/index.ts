@@ -5,8 +5,11 @@ import { ensureAuthIndexes } from './auth/indexes.js';
 import { loadConfig } from './config.js';
 import { createSmtpMailer } from './mail/mailer.js';
 import { ensureDefaultRoles } from './models/role.js';
+import { createDayService } from './services/days.js';
 import { createStationService } from './services/stations.js';
+import { createArpav } from './sources/arpav.js';
 import { createMeteoNetwork } from './sources/meteonetwork.js';
+import { createMetar } from './sources/metar.js';
 import { createWindy } from './sources/windy.js';
 
 const config = loadConfig();
@@ -25,9 +28,13 @@ const auth = createAuth({
 const stations = createStationService({
   meteonetwork: createMeteoNetwork(config.sources.meteonetworkToken),
   windy: createWindy(config.sources.windyApiKey),
+  metar: createMetar(),
+  arpav: createArpav(),
 });
 
-const server = createApp({ auth, stations }).listen(config.port, () => {
+const days = createDayService(stations);
+
+const server = createApp({ auth, stations, days }).listen(config.port, () => {
   console.log(`API listening on port ${config.port}`);
 });
 

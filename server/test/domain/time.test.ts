@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, localDate } from '../../src/domain/time.js';
+import { addDays, localDate, localHours } from '../../src/domain/time.js';
 
 describe('local dates in Europe/Rome', () => {
   it('gives the Italian date of a UTC instant', () => {
@@ -14,5 +14,14 @@ describe('local dates in Europe/Rome', () => {
     expect(addDays('2026-10-31', 1)).toBe('2026-11-01');
     expect(addDays('2026-12-31', 1)).toBe('2027-01-01');
     expect(addDays('2026-03-01', -1)).toBe('2026-02-28');
+  });
+
+  it('lists the hours of a local day, including the days the clocks change', () => {
+    const day = localHours('2026-10-29');
+    expect(day).toHaveLength(24);
+    expect(day[0]).toBe('2026-10-28T23:00:00.000Z');
+    expect(day[23]).toBe('2026-10-29T22:00:00.000Z');
+    expect(localHours('2026-10-25')).toHaveLength(25);
+    expect(localHours('2026-03-29')).toHaveLength(23);
   });
 });

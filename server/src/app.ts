@@ -3,15 +3,26 @@ import express from 'express';
 import type { Auth } from './auth/auth.js';
 import { requireAuth } from './auth/middleware.js';
 import { errorHandler } from './middleware/errors.js';
+import { daysRouter } from './routes/days.js';
 import { healthRouter } from './routes/health.js';
 import { invitesRouter } from './routes/invites.js';
 import { preferencesRouter } from './routes/preferences.js';
+import { sessionsRouter } from './routes/sessions.js';
 import { settingsRouter } from './routes/settings.js';
 import { spotsRouter } from './routes/spots.js';
 import { usersRouter } from './routes/users.js';
+import type { DayService } from './services/days.js';
 import type { StationService } from './services/stations.js';
 
-export function createApp({ auth, stations }: { auth: Auth; stations: StationService }) {
+export function createApp({
+  auth,
+  stations,
+  days,
+}: {
+  auth: Auth;
+  stations: StationService;
+  days: DayService;
+}) {
   const app = express();
 
   app.disable('x-powered-by');
@@ -28,6 +39,8 @@ export function createApp({ auth, stations }: { auth: Auth; stations: StationSer
   app.use('/api/users', usersRouter);
   app.use('/api/invites', invitesRouter);
   app.use('/api/spots', spotsRouter(stations));
+  app.use('/api/sessions', sessionsRouter(days));
+  app.use('/api', daysRouter(days));
   app.use('/api/settings', settingsRouter(stations));
   app.use('/api/me/preferences', preferencesRouter);
 
