@@ -169,7 +169,31 @@ export function createStationService(sources: StationSources) {
     return { pages: page, stations: italian.size, syncedAt: now };
   }
 
-  return { check, cached, live, suggestions, checkStation, syncWindyCatalogue };
+  /**
+   * A station's readings between two instants, oldest first. Only Windy keeps history (7 days);
+   * MeteoNetwork's STANDARD token has none, until the app keeps its own readings (Phase 3).
+   */
+  async function history(
+    ref: Pick<StationRef, 'source' | 'stationId'>,
+    from: Date,
+    to: Date,
+  ): Promise<{ readings: StationReading[] } | { reason: 'no_history' | 'no_data' | 'error' }> {
+    if (ref.source !== 'windy') return { reason: 'no_history' };
+    try {
+      const result = await sources.windy.observations(ref.stationId, from);
+      if (!result) return { reason: 'no_data' };
+      return {
+        readings: result.readings.filter((r) => {
+          const t = new Date(r.time).getTime();
+          return t >= from.getTime() && t < to.getTime();
+        }),
+      };
+    } catch {
+      return { reason: 'error' };
+    }
+  }
+
+  return { check, cached, live, suggestions, checkStation, syncWindyCatalogue, history };
 }
 
 export type StationService = ReturnType<typeof createStationService>;

@@ -1,5 +1,6 @@
 import { fetchJson, num, SourceError } from './http.js';
-import type { Forecast, MarineForecast, Value } from './types.js';
+import { addDays, localDate } from '../domain/time.js';
+import type { Forecast, MarineForecast, ModelSeries, Value } from './types.js';
 
 /**
  * Open-Meteo (https://open-meteo.com), free for non-commercial use, no key.
@@ -28,6 +29,7 @@ export function modelGroup(model: string): ModelGroup | undefined {
 
 const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
 const MARINE_URL = 'https://marine-api.open-meteo.com/v1/marine';
+const PREVIOUS_RUNS_URL = 'https://previous-runs-api.open-meteo.com/v1/forecast';
 
 export const FORECAST_DAYS = 7;
 const WIND_VARIABLES = ['wind_speed_10m', 'wind_gusts_10m', 'wind_direction_10m'] as const;
@@ -174,4 +176,61 @@ export async function probeModelsMany(points: Point[]): Promise<ForecastModel[][
       forecast.models.some((m) => m.model === id && m.speed.some((v) => v !== null)),
     ),
   );
+}
+
+/**
+ * The two runs a Day keeps for a local date (Europe/Rome), from the Previous Runs API (archive
+ * from January 2024): `d0` is each hour from the latest run before it (the live forecast, as
+ * the day was), `d1` the value predicted 24 hours before each hour (the forecast of the day
+ * before). Requested in UTC over two dates and cut to the local day, so 23- and 25-hour days
+ * come out right (Open-Meteo's `timezone` uses a fixed offset). Missing values stay null.
+ */
+export async function fetchPastForecast(
+  point: Point,
+  models: readonly string[],
+  date: string,
+): Promise<{ times: string[]; d0: ModelSeries[]; d1: ModelSeries[] }> {
+  if (models.length === 0) return { times: [], d0: [], d1: [] };
+  const variables = WIND_VARIABLES.flatMap((v) => [v, `${v}_previous_day1`]);
+  const [{ times, series }] = await getHourly(PREVIOUS_RUNS_URL, [point], {
+    hourly: variables.join(','),
+    wind_speed_unit: 'kn',
+    models: models.join(','),
+    start_date: addDays(date, -1),
+    end_date: date,
+  });
+  const keep = times.flatMap((t, i) => (localDate(t) === date ? [i] : []));
+  const key = (variable: string, model: string) =>
+    models.length === 1 ? variable : `${variable}_${model}`;
+  const pick = (variable: string, model: string) => {
+    const list = series[key(variable, model)];
+    return keep.map((i) => (list ? num(list[i]) : null));
+  };
+  const run = (suffix: string) =>
+    models
+      .filter((model) => series[key(`wind_speed_10m${suffix}`, model)])
+      .map((model) => ({
+        model,
+        speed: pick(`wind_speed_10m${suffix}`, model),
+        gust: pick(`wind_gusts_10m${suffix}`, model),
+        dir: pick(`wind_direction_10m${suffix}`, model),
+      }));
+  return { times: keep.map((i) => times[i]), d0: run(''), d1: run('_previous_day1') };
+}
+
+/** Waves of a local date (Europe/Rome), past or present. */
+export async function fetchMarineDay(point: Point, date: string): Promise<MarineForecast> {
+  const [{ times, series }] = await getHourly(MARINE_URL, [point], {
+    hourly: 'wave_height,wave_period,wave_direction',
+    start_date: addDays(date, -1),
+    end_date: date,
+  });
+  const keep = times.flatMap((t, i) => (localDate(t) === date ? [i] : []));
+  const pick = (name: string) => keep.map((i) => num(series[name]?.[i]));
+  return {
+    times: keep.map((i) => times[i]),
+    waveHeight: pick('wave_height'),
+    wavePeriod: pick('wave_period'),
+    waveDir: pick('wave_direction'),
+  };
 }
