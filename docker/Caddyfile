@@ -1,0 +1,24 @@
+{
+	# HTTPS is terminated by the front proxy on the VM (Tornei's Caddy, see docs/deploy.md),
+	# which reaches this container on a localhost-only port.
+	auto_https off
+	servers {
+		# Keep the client address the front proxy puts in X-Forwarded-For (Better Auth's
+		# rate limiting and sessions use it). Only private addresses can reach this port.
+		trusted_proxies static private_ranges
+	}
+}
+
+:80 {
+	encode zstd gzip
+
+	handle /api/* {
+		reverse_proxy server:3000
+	}
+
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}
