@@ -5,6 +5,7 @@ import { WindyStationModel } from '../src/models/windy-station.js';
 import { createTestApp, signUp, type TestApp } from './app.js';
 import { useTestDatabase } from './db.js';
 import { on, stubFetch, type FakeHandler } from './fetch.js';
+import { otherStations } from './sources-stubs.js';
 
 const admin = { name: 'Luca', surname: 'Admin', email: 'admin@example.com' };
 const mario = { name: 'Mario', surname: 'Rossi', email: 'mario@example.com' };
@@ -113,6 +114,7 @@ describe('stations', () => {
       { stationId: 'far', name: 'Venice', lat: 45.44, lon: 12.33 },
     ]);
     stubFetch(
+      ...otherStations(),
       windyStation('near', 45.21, 12.3, 10),
       windyStation('old', 45.22, 12.31, 5 * 60),
       windyStation('calm', 45.25, 12.31, 10, null),
@@ -136,6 +138,60 @@ describe('stations', () => {
       distanceKm: 1.4,
       latest: { wind: 11.7, dir: 70 },
     });
+  });
+
+  it('suggests stations from every searchable source together, nearest first', async () => {
+    const agent = await asAdmin();
+    const spot = await SpotModel.create(sottomarina);
+    await WindyStationModel.create({ stationId: 'near', name: 'Near', lat: 45.21, lon: 12.3 });
+    const solarNow = new Date(Math.floor(Date.now() / 1_800_000) * 1_800_000 + 3_600_000)
+      .toISOString()
+      .slice(0, 16)
+      .replace(/[-T:]/g, '');
+    stubFetch(
+      ...otherStations({
+        metar: [{ icaoId: 'LIPZ', site: 'Venice/Polo Arpt', lat: 45.32, lon: 12.33 }],
+        arpav:
+          "<STAZIONE><IDSTAZ>168</IDSTAZ><NOME><![CDATA[Chioggia - Sant'Anna]]></NOME><X>12.276</X><Y>45.146</Y><LINKSTAZ>0168.xml</LINKSTAZ></STAZIONE>",
+      }),
+      windyStation('near', 45.21, 12.3, 10),
+      on('https://aviationweather.gov/api/data/metar', {
+        body: [
+          {
+            icaoId: 'LIPZ',
+            obsTime: Math.floor(Date.now() / 1000) - 600,
+            wdir: 90,
+            wspd: 8,
+            lat: 45.32,
+            lon: 12.33,
+            name: 'Venice/Polo Arpt, VE, IT',
+          },
+        ],
+      }),
+      (url) =>
+        url.toString().endsWith('/0168.xml')
+          ? {
+              raw: Buffer.from(
+                `<CONTENITORE><SENSORE><TYPE>VVENTO</TYPE><DATI ISTANTE="${solarNow}"><VM>4.0</VM></DATI></SENSORE><SENSORE><TYPE>DVENTO</TYPE><DATI ISTANTE="${solarNow}"><VM>60</VM></DATI></SENSORE></CONTENITORE>`,
+                'latin1',
+              ),
+            }
+          : undefined,
+    );
+
+    const res = await agent.get(`/api/spots/${spot.id}/station-suggestions`);
+
+    expect(
+      res.body.map((s: { source: string; name: string; usable: boolean }) => [
+        s.source,
+        s.name,
+        s.usable,
+      ]),
+    ).toEqual([
+      ['windy', 'Windy near', true],
+      ['arpav', "Chioggia - Sant'Anna", true],
+      ['metar', 'Venice/Polo Arpt (METAR LIPZ)', true],
+    ]);
   });
 
   it('checks a MeteoNetwork station typed by code, including one that is not usable', async () => {
@@ -168,7 +224,7 @@ describe('stations', () => {
     });
 
     expect(
-      (await agent.get(`/api/spots/${spot.id}/station-check?source=arpav&stationId=x`)).status,
+      (await agent.get(`/api/spots/${spot.id}/station-check?source=holfuy&stationId=x`)).status,
     ).toBe(400);
   });
 

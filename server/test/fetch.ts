@@ -1,6 +1,7 @@
 import { vi } from 'vitest';
 
-export type FakeResponse = { status?: number; body?: unknown };
+/** `body` is sent as JSON; `raw` as it is (e.g. text in another encoding). */
+export type FakeResponse = { status?: number; body?: unknown; raw?: Buffer };
 export type FakeHandler = (url: URL, init: RequestInit) => FakeResponse | undefined;
 
 /**
@@ -13,7 +14,8 @@ export function stubFetch(...handlers: FakeHandler[]) {
     for (const handler of handlers) {
       const res = handler(url, init);
       if (res) {
-        const { status = 200, body } = res;
+        const { status = 200, body, raw } = res;
+        if (raw) return new Response(new Uint8Array(raw), { status });
         return new Response(body === undefined ? null : JSON.stringify(body), { status });
       }
     }

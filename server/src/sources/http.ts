@@ -42,6 +42,33 @@ export async function fetchJson<T>(
   return { status: res.status, body };
 }
 
+/** A text response (e.g. XML), decoded with `encoding` (default UTF-8). */
+export async function fetchText(
+  source: string,
+  url: string,
+  {
+    encoding = 'utf-8',
+    timeoutMs = DEFAULT_TIMEOUT_MS,
+  }: { encoding?: string; timeoutMs?: number } = {},
+): Promise<{ status: number; text: string }> {
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': USER_AGENT },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    return { status: res.status, text: new TextDecoder(encoding).decode(await res.arrayBuffer()) };
+  } catch (err) {
+    throw new SourceError(source, 0, err instanceof Error ? err.message : 'request failed');
+  }
+}
+
+/** A box of ±`radiusKm` around a point, in degrees (for searches by bounding box). */
+export function boundingBox({ lat, lon }: { lat: number; lon: number }, radiusKm: number) {
+  const dLat = radiusKm / 111;
+  const dLon = radiusKm / (111 * Math.cos((lat * Math.PI) / 180));
+  return { minLat: lat - dLat, maxLat: lat + dLat, minLon: lon - dLon, maxLon: lon + dLon };
+}
+
 /**
  * Keeps calls to one service under `max` per `windowMs`, waiting when needed. In-process,
  * like the rest of the app's state: it assumes a single server instance.

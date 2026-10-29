@@ -1,4 +1,4 @@
-import type { FakeHandler } from './fetch.js';
+import { on, type FakeHandler } from './fetch.js';
 
 /**
  * A fake Open-Meteo forecast API: for every point and requested model (except `uncovered`),
@@ -122,4 +122,20 @@ export function windyHistory(id: string, from: Date, to: Date, wind = 7.7): Fake
       },
     };
   };
+}
+
+/** METAR airports and ARPAV stations for station searches: none, unless given. */
+export function otherStations({
+  metar = [] as { icaoId: string; site: string; lat: number; lon: number }[],
+  arpav = '',
+} = {}): FakeHandler[] {
+  return [
+    on('https://aviationweather.gov/api/data/stationinfo', {
+      body: metar.map((m) => ({ ...m, siteType: ['METAR'] })),
+    }),
+    (url) =>
+      url.toString().startsWith('https://meteo.arpa.veneto.it/meteo/dati_meteo/xml/stazioni.xml')
+        ? { raw: Buffer.from(`<METEOGRAMMI>${arpav}</METEOGRAMMI>`, 'latin1') }
+        : undefined,
+  ];
 }
