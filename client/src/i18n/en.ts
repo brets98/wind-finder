@@ -326,6 +326,7 @@ export const en = {
     forecastsPending: 'The day is not over: forecasts will be completed later.',
     maxObserved: 'Max observed {wind}',
     sessions: 'Sessions',
+    sessionCount: { one: '1 session', other: '{n} sessions' },
   },
   board: {
     title: 'Board',

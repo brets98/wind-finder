@@ -51,7 +51,11 @@ export function SpotHistory({ spotId, version }: { spotId: string; version: numb
                   </span>
                 )}
                 {d.sessions.length > 0 && (
-                  <span className="badge">{`${d.sessions.length} ${t.day.sessions.toLowerCase()}`}</span>
+                  <span className="badge">
+                    {d.sessions.length === 1
+                      ? t.day.sessionCount.one
+                      : fill(t.day.sessionCount.other, { n: d.sessions.length })}
+                  </span>
                 )}
               </button>
               {open === d.id && <DayView dayId={d.id} />}
