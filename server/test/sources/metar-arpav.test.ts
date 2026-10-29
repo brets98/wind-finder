@@ -83,13 +83,14 @@ describe('METAR adapter', () => {
 
     const list = await metar.history!(
       'LIPZ',
-      new Date(Date.now() - 2 * 3_600_000),
+      // 2.5 h back plus a margin hour, off the whole-hour boundary: 4 hours requested
+      new Date(Date.now() - 2.5 * 3_600_000),
       new Date(Date.now() - 20 * 60_000),
     );
 
     expect(list).toHaveLength(2);
     expect(list![0].time < list![1].time).toBe(true);
-    expect(new URL(fetchMock.mock.calls[0][0] as string).searchParams.get('hours')).toBe('3');
+    expect(new URL(fetchMock.mock.calls[0][0] as string).searchParams.get('hours')).toBe('4');
   });
 
   it('finds airports that issue METARs within a radius', async () => {
