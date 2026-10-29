@@ -244,6 +244,28 @@ describe('ARPA Lombardia adapter', () => {
     expect(await lombardia.check('999')).toEqual({ usable: false, reason: 'not_available' });
   });
 
+  it('stops sending requests for a while after a "too many requests" answer', async () => {
+    const fetchMock = stubFetch(
+      registry,
+      on('https://www.dati.lombardia.it/resource/647i-nhxk.json', {
+        status: 429,
+        body: { message: 'Too many requests' },
+      }),
+    );
+    const lombardia = createLombardia();
+
+    await lombardia.check('573');
+    const calls = fetchMock.mock.calls.length;
+    expect(await lombardia.check('1202')).toEqual({ usable: false, reason: 'error' });
+    expect(
+      await lombardia.history!('573', new Date(Date.now() - 86_400_000), new Date()).catch(
+        () => 'paused',
+      ),
+    ).toBe('paused');
+
+    expect(fetchMock.mock.calls.length).toBe(calls);
+  });
+
   it('reports throttling as an error, and finds stations within a radius', async () => {
     stubFetch(
       registry,

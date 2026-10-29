@@ -23,6 +23,8 @@ const LIST_TTL_MS = 24 * 60 * 60 * 1000;
 const CHECK_HOURS = 3;
 /** The last hours of every wind sensor are fetched in one request and reused this long. */
 const RECENT_TTL_MS = 5 * 60 * 1000;
+/** After a "too many requests" answer, no request is sent for this long. */
+const BACKOFF_MS = 30 * 60 * 1000;
 
 interface Sensor {
   idsensore: string;
@@ -53,13 +55,17 @@ const VALID = new Set(['VA', 'VV']);
 export function createLombardia(appToken?: string): StationAdapter & { configured: boolean } {
   let list: { at: number; stations: Station[] } | null = null;
   let recent: { at: number; rows: Promise<Row[]> } | null = null;
+  // The portal throttles hard (HTTP 429, even with a token, after a few requests)
+  let pausedUntil = 0;
 
   async function query<T>(dataset: string, params: Record<string, string>) {
+    if (Date.now() < pausedUntil) throw new Error('lombardia: paused after HTTP 429');
     const { status, body } = await fetchJson<T>(
       'lombardia',
       `${BASE_URL}/${dataset}.json?${new URLSearchParams(params)}`,
       { headers: appToken ? { 'X-App-Token': appToken } : {} },
     );
+    if (status === 429) pausedUntil = Date.now() + BACKOFF_MS;
     if (status !== 200) throw new Error(`lombardia: HTTP ${status}`);
     return body;
   }
