@@ -5,9 +5,13 @@ import { requireAuth } from './auth/middleware.js';
 import { errorHandler } from './middleware/errors.js';
 import { healthRouter } from './routes/health.js';
 import { invitesRouter } from './routes/invites.js';
+import { preferencesRouter } from './routes/preferences.js';
+import { settingsRouter } from './routes/settings.js';
+import { spotsRouter } from './routes/spots.js';
 import { usersRouter } from './routes/users.js';
+import type { StationService } from './services/stations.js';
 
-export function createApp({ auth }: { auth: Auth }) {
+export function createApp({ auth, stations }: { auth: Auth; stations: StationService }) {
   const app = express();
 
   app.disable('x-powered-by');
@@ -23,6 +27,9 @@ export function createApp({ auth }: { auth: Auth }) {
   app.use('/api', requireAuth(auth));
   app.use('/api/users', usersRouter);
   app.use('/api/invites', invitesRouter);
+  app.use('/api/spots', spotsRouter(stations));
+  app.use('/api/settings', settingsRouter(stations));
+  app.use('/api/me/preferences', preferencesRouter);
 
   app.use(errorHandler);
 
