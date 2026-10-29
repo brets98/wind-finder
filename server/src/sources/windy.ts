@@ -111,7 +111,16 @@ export function createWindy(apiKey: string | undefined) {
     }
   }
 
-  return { configured: Boolean(apiKey), listPage, observations, check };
+  async function history(stationId: string, from: Date, to: Date) {
+    const result = await observations(stationId, from);
+    if (!result) return null;
+    return result.readings.filter((r) => {
+      const t = Date.parse(r.time);
+      return t >= from.getTime() && t < to.getTime();
+    });
+  }
+
+  return { configured: Boolean(apiKey), listPage, observations, check, history };
 }
 
 export type Windy = ReturnType<typeof createWindy>;

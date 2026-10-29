@@ -58,7 +58,12 @@ export const en = {
   spotStatus: { to_verify: 'To verify', verified: 'Verified' },
   water: { flat: 'Flat', chop: 'Chop', waves: 'Waves' },
   level: { beginner: 'Beginner', intermediate: 'Intermediate', advanced: 'Advanced' },
-  sources: { meteonetwork: 'MeteoNetwork', windy: 'Windy stations' },
+  sources: {
+    meteonetwork: 'MeteoNetwork',
+    windy: 'Windy stations',
+    metar: 'Airport METAR',
+    arpav: 'ARPAV Veneto',
+  },
   models: {
     italia_meteo_arpae_icon_2i: 'ICON-2I (ItaliaMeteo, 2 km)',
     meteofrance_arome_france_hd: 'AROME HD (Météo-France, 1.5 km)',
@@ -180,6 +185,10 @@ export const en = {
       'Weather data by Open-Meteo.com (CC BY 4.0), from the national weather services that run each model.',
     stations: 'Live stations',
     meteonetworkText: 'Data from the MeteoNetwork weather station network (CC BY 4.0).',
+    metarText:
+      'Airport weather reports (METAR) from the NOAA Aviation Weather Center (public domain).',
+    arpavText:
+      'Data from the ARPAV (Veneto regional environmental agency) weather stations, CC BY 4.0, not validated.',
     windyText:
       'Open-data personal weather stations shared on Windy.com by their owners, under their open license.',
     maps: 'Maps and spots',
@@ -225,9 +234,9 @@ export const en = {
       clear: 'Remove',
       notes: 'Notes about the station',
       saveNotes: 'Save notes',
-      suggestions: 'Windy stations within 20 km',
+      suggestions: 'Stations within 20 km (Windy, airport METAR, ARPAV)',
       showUnusable: 'Show stations that cannot be used',
-      noSuggestions: 'No usable Windy station within 20 km.',
+      noSuggestions: 'No usable station within 20 km.',
       catalogue: 'Windy station list: {count} Italian stations, updated {date}.',
       catalogueNever: 'The Windy station list has not been downloaded yet.',
       syncCatalogue: 'Update the Windy station list',
