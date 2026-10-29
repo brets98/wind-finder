@@ -1,0 +1,81 @@
+# Production: docker compose -f docker-compose.prod.yml up -d
+# Runs on the same 1 GB VM as Tornei (Google Cloud's free e2-micro, with swap): every container
+# has a memory limit and rotated logs. The database is MongoDB Atlas (MONGODB_URI in .env).
+# Ports 80/443 belong to Tornei's Caddy, which serves HTTPS and forwards this app's domain to
+# the web container on 127.0.0.1:WEB_PORT (see docs/deploy.md).
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: '3'
+
+services:
+  server:
+    image: ghcr.io/brets98/wind-finder-server:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: docker/server.Dockerfile
+      target: prod
+    restart: unless-stopped
+    logging: *logging
+    mem_limit: 256m
+    environment:
+      NODE_OPTIONS: --max-old-space-size=160
+      MONGODB_URI: ${MONGODB_URI:?}
+      BETTER_AUTH_URL: https://${DOMAIN:?}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      SMTP_HOST: ${SMTP_HOST:?}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:?}
+
+  # Dumps the Atlas database to ./backups now and then every 24 hours, keeping BACKUP_KEEP_DAYS days
+  # (Atlas' free tier keeps no backups of its own). The image also has mongosh for admin tasks.
+  # Restore: docker compose -f docker-compose.prod.yml exec -T backup
+  #   bash -c 'mongorestore --uri="$MONGODB_URI" --drop --gzip --archive' < backups/<file>
+  backup:
+    image: mongo:8
+    restart: unless-stopped
+    logging: *logging
+    mem_limit: 256m
+    environment:
+      MONGODB_URI: ${MONGODB_URI:?}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+    volumes:
+      - ./backups:/backups
+    entrypoint: ['/bin/bash', '-c']
+    command:
+      - |
+        while true; do
+          file="/backups/wind-finder-$$(date +%Y%m%d-%H%M%S).archive.gz"
+          if mongodump --uri="$$MONGODB_URI" --gzip --archive="$$file" --quiet; then
+            echo "Backup written: $$file"
+          else
+            echo "Backup failed" >&2
+            rm -f "$$file"
+            sleep 300
+            continue
+          fi
+          find /backups -name 'wind-finder-*.archive.gz' -mtime +"$$BACKUP_KEEP_DAYS" -delete
+          sleep 86400
+        done
+
+  web:
+    image: ghcr.io/brets98/wind-finder-web:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+      target: prod
+    restart: unless-stopped
+    logging: *logging
+    mem_limit: 64m
+    ports:
+      # Localhost only: reached through the front proxy, never directly from the internet
+      - '127.0.0.1:${WEB_PORT:-8081}:80'
+    depends_on:
+      - server
