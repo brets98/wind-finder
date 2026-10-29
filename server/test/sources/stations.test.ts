@@ -120,6 +120,18 @@ describe('Windy adapter', () => {
     expect((init?.headers as Record<string, string>)['windy-api-key']).toBe('test-key');
   });
 
+  it('keeps the start of the history just inside the 7 days Windy serves', async () => {
+    const fetchMock = stubFetch(
+      on('https://stations.windy.com/', { body: { header, data: { ts: [] } } }),
+    );
+    const now = new Date('2026-10-29T12:00:00Z');
+
+    await windy.observations('pws-1', new Date('2026-10-20T00:00:00Z'), now);
+
+    const fromTs = Number(new URL(fetchMock.mock.calls[0][0] as string).searchParams.get('fromTs'));
+    expect(now.getTime() / 1000 - fromTs).toBe(7 * 86400 - 600);
+  });
+
   it('checks a station with its latest reading', async () => {
     stubFetch(
       on('https://stations.windy.com/api/v2/opendata/station/pws-1/observation?latestLimit=1', {

@@ -35,6 +35,6 @@ export async function getSettings() {
   return SettingsModel.findOneAndUpdate(
     { key: 'global' },
     { $setOnInsert: { key: 'global' } },
-    { upsert: true, new: true, setDefaultsOnInsert: true },
+    { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
   ).orFail();
 }

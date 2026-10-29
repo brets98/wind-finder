@@ -11,6 +11,8 @@ import type { StationCheck, StationInfo, StationReading } from './types.js';
  * Never use Windy's Point Forecast API (its free key returns random data).
  */
 const BASE_URL = 'https://stations.windy.com/api/v2/opendata';
+/** History Windy serves, minus a margin (it refuses a start exactly 7 days ago). */
+const MAX_HISTORY_MS = 7 * 24 * 60 * 60 * 1000 - 10 * 60 * 1000;
 
 interface StationModel {
   id: string;
@@ -67,9 +69,15 @@ export function createWindy(apiKey: string | undefined) {
     };
   }
 
-  /** Readings from `from` (at most 7 days back), oldest first; the latest only without it. */
-  async function observations(stationId: string, from?: Date) {
-    const query = from ? `fromTs=${Math.floor(from.getTime() / 1000)}` : 'latestLimit=1';
+  /**
+   * Readings from `from`, oldest first; the latest only without it. Windy refuses a start
+   * 7 days ago or more, so an older one is moved just inside the limit.
+   */
+  async function observations(stationId: string, from?: Date, now = new Date()) {
+    const earliest = now.getTime() - MAX_HISTORY_MS;
+    const query = from
+      ? `fromTs=${Math.floor(Math.max(from.getTime(), earliest) / 1000)}`
+      : 'latestLimit=1';
     const { status, body } = await get<ObservationResponse>(
       `/station/${encodeURIComponent(stationId)}/observation?${query}`,
     );

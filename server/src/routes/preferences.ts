@@ -20,7 +20,7 @@ preferencesRouter.patch('/', async (req, res) => {
   const prefs = await PreferencesModel.findOneAndUpdate(
     { userId: req.user!.id },
     unit === undefined ? {} : { unit },
-    { upsert: true, new: true, setDefaultsOnInsert: true },
+    { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
   );
   res.json({ unit: prefs.unit });
 });
