@@ -6,11 +6,15 @@ from documentation or search results and needs checking before any work.
 
 ## Already in the app
 
+Meteotrentino and ARPA Lombardia were added after this survey (see their rows below, now in the app).
+
 | Source | Coverage | Format | Licence | Every | Gusts | History | Notes |
 |---|---|---|---|---|---|---|---|
 | **METAR** (NOAA Aviation Weather Center) | Airports, all Italy | JSON API, no key | Public domain | 30 min | When significant | 7 days | Verified. Excellent for spots next to an airport (see below) |
 | **ARPAV** (Veneto) | ~190 stations, Veneto | XML per station, no key | CC BY 4.0 | 30 min | No | ~2 days | Verified. Solves Sottomarina (4 usable stations) |
 | **Windy open-data** | Scattered, personal stations | JSON API, free key | Owners' open licence | ~5-10 min | Often | 7 days | Verified. Many stations offline; some are stale copies of ARPAV stations |
+| **Meteotrentino** | 113 active stations, Trentino | XML, no key | CC BY 4.0 | 15 min | Yes | ~1.5 days | Verified. Torbole (Lake Garda) usable; most other stations have no anemometer |
+| **ARPA Lombardia** | 132 wind stations, Lombardy | Socrata JSON | CC0 | 10 min | Max value (operator 3) when present | Current month | Verified, but anonymous requests get HTTP 429 quickly: needs the free app token |
 | **MeteoNetwork** | Amateur network, all Italy | JSON API, free token | CC BY 4.0 | ~5-10 min | Often | None (free token) | Waiting for the token; no search by position |
 
 ### METAR next to kite spots (verified, reporting now)

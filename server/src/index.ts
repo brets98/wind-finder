@@ -9,7 +9,9 @@ import { createDayService } from './services/days.js';
 import { createStationService } from './services/stations.js';
 import { createArpav } from './sources/arpav.js';
 import { createMeteoNetwork } from './sources/meteonetwork.js';
+import { createLombardia } from './sources/lombardia.js';
 import { createMetar } from './sources/metar.js';
+import { createMeteotrentino } from './sources/meteotrentino.js';
 import { createWindy } from './sources/windy.js';
 
 const config = loadConfig();
@@ -30,6 +32,8 @@ const stations = createStationService({
   windy: createWindy(config.sources.windyApiKey),
   metar: createMetar(),
   arpav: createArpav(),
+  meteotrentino: createMeteotrentino(),
+  lombardia: createLombardia(config.sources.lombardiaAppToken),
 });
 
 const days = createDayService(stations);

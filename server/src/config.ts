@@ -27,6 +27,8 @@ export interface Config {
     meteonetworkToken?: string;
     /** Windy Stations API key; without it Windy stations are off */
     windyApiKey?: string;
+    /** Open Data Lombardia app token: optional, avoids the throttling of anonymous requests */
+    lombardiaAppToken?: string;
   };
   smtp: {
     host: string;
@@ -56,6 +58,7 @@ export function loadConfig(): Config {
     sources: {
       meteonetworkToken: optional('METEONETWORK_TOKEN'),
       windyApiKey: optional('WINDY_API_KEY'),
+      lombardiaAppToken: optional('LOMBARDIA_APP_TOKEN'),
     },
     smtp: {
       host: required('SMTP_HOST'),
