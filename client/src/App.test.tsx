@@ -120,12 +120,13 @@ describe('App', () => {
   });
 
   describe('signed in', () => {
-    it('shows the home page with the menu and the current user', () => {
+    it('shows the home page with the menu and the current user', async () => {
       signedInAs('user');
       renderAt('/');
 
-      expect(screen.getByRole('heading', { name: 'Spots' })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: 'Home' })).toBeInTheDocument();
+      expect(await screen.findByRole('heading', { name: 'Spots' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Spots' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'About & data sources' })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Change password' })).toBeInTheDocument();
       expect(screen.getByText('Mario Rossi')).toBeInTheDocument();
       expect(document.documentElement.lang).toBe('en');
@@ -143,10 +144,11 @@ describe('App', () => {
       renderAt('/');
 
       expect(screen.queryByRole('link', { name: 'Invites' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'Manage spots' })).not.toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Users' })).not.toBeInTheDocument();
     });
 
-    it('shows the Invites and Users menu items to admins', () => {
+    it('shows the admin menu items to admins', () => {
       signedInAs('admin');
       renderAt('/');
 
@@ -155,6 +157,21 @@ describe('App', () => {
         '/admin/invites',
       );
       expect(screen.getByRole('link', { name: 'Users' })).toHaveAttribute('href', '/admin/users');
+      expect(screen.getByRole('link', { name: 'Manage spots' })).toHaveAttribute(
+        'href',
+        '/admin/spots',
+      );
+      expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute(
+        'href',
+        '/admin/settings',
+      );
+    });
+
+    it('does not open admin pages for regular users', () => {
+      signedInAs('user');
+      renderAt('/admin/spots');
+
+      expect(screen.getByRole('heading', { name: 'Page not found' })).toBeInTheDocument();
     });
 
     it('shows a not-found page for unknown paths', () => {
