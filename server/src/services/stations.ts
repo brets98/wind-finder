@@ -21,7 +21,12 @@ export interface StationSources {
   windy: Windy;
   metar: StationAdapter;
   arpav: StationAdapter;
+  meteotrentino: StationAdapter;
+  lombardia: StationAdapter;
 }
+
+/** Sources searched by position through their adapter's `nearby`. */
+const SEARCHABLE = ['metar', 'arpav', 'meteotrentino', 'lombardia'] as const;
 
 /** A reading older than this is stale: flagged on the live panel, hidden from suggestions. */
 export const STALE_MS = 3 * 60 * 60 * 1000;
@@ -106,7 +111,7 @@ export function createStationService(sources: StationSources) {
 
   /**
    * Stations the admin can choose for a spot, from every source that can be searched by
-   * position (Windy, METAR airports, ARPAV) within 20 km, nearest first, each checked for
+   * position (Windy, METAR airports, ARPAV, Meteotrentino, ARPA Lombardia) within 20 km, nearest first, each checked for
    * recent wind. MeteoNetwork can't be searched with a STANDARD token: its stations are added
    * by code (`checkStation()`). A source that fails is left out.
    */
@@ -119,7 +124,7 @@ export function createStationService(sources: StationSources) {
       lon: s.lon,
     }));
     const others = await Promise.all(
-      (['metar', 'arpav'] as const).map((source) =>
+      SEARCHABLE.map((source) =>
         (sources[source].nearby?.(spot, SUGGESTION_RADIUS_KM) ?? Promise.resolve([])).catch(
           (err: unknown) => {
             console.error(`Could not search ${source} stations:`, err);
@@ -188,7 +193,7 @@ export function createStationService(sources: StationSources) {
 
   /**
    * A station's readings between two instants, oldest first, where its source keeps history:
-   * Windy and METAR 7 days, ARPAV about 2 days. MeteoNetwork's STANDARD token has none, until
+   * Windy and METAR 7 days, ARPA Lombardia the current month, ARPAV and Meteotrentino about 2 days. MeteoNetwork's STANDARD token has none, until
    * the app keeps its own readings (Phase 3).
    */
   async function history(

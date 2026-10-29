@@ -10,7 +10,9 @@ import { createDayService } from '../src/services/days.js';
 import { createStationService } from '../src/services/stations.js';
 import { createArpav } from '../src/sources/arpav.js';
 import { createMeteoNetwork } from '../src/sources/meteonetwork.js';
+import { createLombardia } from '../src/sources/lombardia.js';
 import { createMetar } from '../src/sources/metar.js';
+import { createMeteotrentino } from '../src/sources/meteotrentino.js';
 import { createWindy } from '../src/sources/windy.js';
 
 export const BASE_URL = 'http://localhost:3000';
@@ -33,6 +35,8 @@ export function createTestApp() {
     windy: createWindy('test-windy-key'),
     metar: createMetar(),
     arpav: createArpav(),
+    meteotrentino: createMeteotrentino(),
+    lombardia: createLombardia(undefined),
   });
   const days = createDayService(stations);
   const app = createApp({ auth, stations, days });

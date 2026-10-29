@@ -45,6 +45,18 @@ export function AboutPage() {
           CC BY 4.0
         </a>
       </p>
+      <p>
+        <a href="https://www.meteotrentino.it/" target="_blank" rel="noreferrer">
+          Meteotrentino
+        </a>
+        : {t.about.meteotrentinoText}
+      </p>
+      <p>
+        <a href="https://www.dati.lombardia.it/" target="_blank" rel="noreferrer">
+          ARPA Lombardia
+        </a>
+        : {t.about.lombardiaText}
+      </p>
       <h2>{t.about.maps}</h2>
       <p>
         <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">

@@ -124,12 +124,16 @@ export function windyHistory(id: string, from: Date, to: Date, wind = 7.7): Fake
   };
 }
 
-/** METAR airports and ARPAV stations for station searches: none, unless given. */
+/** METAR, ARPAV, Meteotrentino and ARPA Lombardia stations for searches: none, unless given. */
 export function otherStations({
   metar = [] as { icaoId: string; site: string; lat: number; lon: number }[],
   arpav = '',
 } = {}): FakeHandler[] {
   return [
+    on('https://dati.meteotrentino.it/service.asmx/listaStazioni', {
+      raw: Buffer.from('<ArrayOfAnagrafica/>'),
+    }),
+    on('https://www.dati.lombardia.it/resource/nf78-nj6b.json', { body: [] }),
     on('https://aviationweather.gov/api/data/stationinfo', {
       body: metar.map((m) => ({ ...m, siteType: ['METAR'] })),
     }),
