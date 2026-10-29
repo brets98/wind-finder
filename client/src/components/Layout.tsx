@@ -48,6 +48,9 @@ export function Layout({ user }: Props) {
             <NavLink to="/" end onClick={close}>
               {t.menu.home}
             </NavLink>
+            <NavLink to="/board" onClick={close}>
+              {t.menu.board}
+            </NavLink>
             {isAdmin && (
               <>
                 <NavLink to="/admin/spots" onClick={close}>
