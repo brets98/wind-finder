@@ -30,6 +30,21 @@ export function AboutPage() {
         </a>
         : {t.about.windyText}
       </p>
+      <p>
+        <a href="https://aviationweather.gov/" target="_blank" rel="noreferrer">
+          Aviation Weather Center
+        </a>
+        : {t.about.metarText}
+      </p>
+      <p>
+        <a href="https://meteo.arpa.veneto.it/" target="_blank" rel="noreferrer">
+          ARPAV
+        </a>
+        : {t.about.arpavText}{' '}
+        <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">
+          CC BY 4.0
+        </a>
+      </p>
       <h2>{t.about.maps}</h2>
       <p>
         <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">

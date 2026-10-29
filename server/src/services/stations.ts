@@ -201,7 +201,8 @@ export function createStationService(sources: StationSources) {
     try {
       const readings = await adapter.history(ref.stationId, from, to);
       return readings ? { readings } : { reason: 'no_data' };
-    } catch {
+    } catch (err) {
+      console.error(`Could not read the history of ${ref.source} ${ref.stationId}:`, err);
       return { reason: 'error' };
     }
   }
