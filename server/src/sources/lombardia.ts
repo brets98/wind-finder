@@ -139,7 +139,8 @@ export function createLombardia(appToken?: string): StationAdapter & { configure
       if (r.idsensore === station.speedSensor) {
         if (r.idoperatore === '3') reading.gust = toKnots.fromMs(value);
         else reading.wind = toKnots.fromMs(value);
-      } else if (!CALM_OR_VARIABLE.has(value)) {
+      } else if (r.idoperatore !== '3' && !CALM_OR_VARIABLE.has(value)) {
+        // Direction comes with operator 3 too (with the gust): keep the mean direction only
         reading.dir = value;
       }
       byTime.set(time, reading);

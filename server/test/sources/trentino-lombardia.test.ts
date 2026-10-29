@@ -176,6 +176,8 @@ describe('ARPA Lombardia adapter', () => {
           row('19109', 20, 5.144),
           row('19109', 20, 7.2, '3'),
           row('6008', 20, 210),
+          // The direction of the gust (operator 3) is ignored
+          row('6008', 20, 99, '3'),
         ],
       }),
     );
