@@ -44,6 +44,15 @@ export function apiPut<T>(path: string, body: unknown): Promise<T> {
   return send<T>('PUT', path, body);
 }
 
-export function apiDelete(path: string): Promise<void> {
-  return request<void>(path, { method: 'DELETE' });
+export function apiDelete(path: string, body?: unknown): Promise<void> {
+  return request<void>(
+    path,
+    body === undefined
+      ? { method: 'DELETE' }
+      : {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        },
+  );
 }

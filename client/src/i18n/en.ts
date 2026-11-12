@@ -30,6 +30,7 @@ export const en = {
     invites: 'Invites',
     users: 'Users',
     changePassword: 'Change password',
+    notifications: 'Notifications',
     about: 'About & data sources',
     signOut: 'Sign out',
   },
@@ -360,6 +361,30 @@ export const en = {
     goodWindHint: 'Used everywhere: spot list, forecasts, study days and notifications.',
     minKnots: 'Minimum wind (knots)',
     minHours: 'For at least (hours in a row)',
+    notifications: 'Notification times',
+    notificationsHint:
+      'Italian time. The push and the evening email go out once a day to users with favorite spots.',
+    pushAt: 'Push notification',
+    emailAt: 'Evening email',
+  },
+  notifications: {
+    title: 'Notifications',
+    intro:
+      'About your favorite spots, at most once a day each: a push when most models agree on good wind in the next 3 days, and an evening email with the good wind measured today and forecast in the next days.',
+    push: 'Push on this device',
+    pushOn: 'On: this device gets the daily push.',
+    pushOff: 'Off on this device.',
+    enablePush: 'Turn on push',
+    disablePush: 'Turn off push',
+    pushDenied:
+      'Notifications are blocked for this site: allow them in the browser settings, then try again.',
+    pushUnsupported: 'This browser does not support push notifications.',
+    pushServerOff: 'Push notifications are not set up on the server.',
+    iosInstall:
+      'On iPhone and iPad, push works only in the installed app: tap Share, then "Add to Home Screen", and open the app from there.',
+    email: 'Evening email',
+    emailOn: 'Send me the evening email',
+    pushError: 'Could not change push on this device. Try again.',
   },
   invites: {
     title: 'Invites',

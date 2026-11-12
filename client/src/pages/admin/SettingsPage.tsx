@@ -4,19 +4,32 @@ import { apiGet, apiPatch } from '../../lib/api';
 
 interface Settings {
   goodWind: { minKnots: number; minHours: number };
+  notifications: { pushAt: string; emailAt: string };
 }
 
-/** Admin: global settings (the good-wind definition; notification times come in Phase 3). */
+interface Form {
+  minKnots: string;
+  minHours: string;
+  pushAt: string;
+  emailAt: string;
+}
+
+/** Admin: global settings (the good-wind definition and the notification times). */
 export function SettingsPage() {
   const { t } = useI18n();
-  const [form, setForm] = useState<{ minKnots: string; minHours: string } | null>(null);
+  const [form, setForm] = useState<Form | null>(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
     apiGet<Settings>('/settings')
       .then((s) =>
-        setForm({ minKnots: String(s.goodWind.minKnots), minHours: String(s.goodWind.minHours) }),
+        setForm({
+          minKnots: String(s.goodWind.minKnots),
+          minHours: String(s.goodWind.minHours),
+          pushAt: s.notifications.pushAt,
+          emailAt: s.notifications.emailAt,
+        }),
       )
       .catch(() => setError(t.common.loadError));
   }, [t]);
@@ -29,6 +42,7 @@ export function SettingsPage() {
     try {
       await apiPatch('/settings', {
         goodWind: { minKnots: Number(form.minKnots), minHours: Number(form.minHours) },
+        notifications: { pushAt: form.pushAt, emailAt: form.emailAt },
       });
       setMessage(t.common.saved);
     } catch {
@@ -63,6 +77,26 @@ export function SettingsPage() {
               max={24}
               value={form.minHours}
               onChange={(e) => setForm({ ...form, minHours: e.target.value })}
+            />
+          </label>
+          <h2>{t.settings.notifications}</h2>
+          <p className="muted">{t.settings.notificationsHint}</p>
+          <label>
+            {t.settings.pushAt}
+            <input
+              type="time"
+              required
+              value={form.pushAt}
+              onChange={(e) => setForm({ ...form, pushAt: e.target.value })}
+            />
+          </label>
+          <label>
+            {t.settings.emailAt}
+            <input
+              type="time"
+              required
+              value={form.emailAt}
+              onChange={(e) => setForm({ ...form, emailAt: e.target.value })}
             />
           </label>
           <button type="submit">{t.common.save}</button>
