@@ -3,7 +3,7 @@
  * and Overpass ask for one), a timeout, and JSON parsing. Uses the global fetch, which tests stub.
  */
 export const USER_AGENT =
-  'WindFinder/0.1 (personal non-commercial app; +https://github.com/brets98/wind-finder)';
+  'KiteWind/0.1 (personal non-commercial app; +https://github.com/brets98/wind-finder)';
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 

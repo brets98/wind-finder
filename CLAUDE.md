@@ -4,7 +4,7 @@ Project instructions for Claude Code. Read them at the start of every session an
 
 ## The project
 
-Wind Finder: a personal web app (the admin plus a few invited friends) about **kite / water-sports spots in Italy**: spots on a list or a map, wind forecasts from several models side by side, live wind from a weather station near each spot, logged sessions, automatically archived "study days", and push/email alerts when good wind is expected. The full brief is `docs/debrief.md`; this file summarizes it and records the decisions taken since. Non-commercial and **free to run**: free data sources, free hosting, no paid services.
+KiteWind: a personal web app (the admin plus a few invited friends) about **kite / water-sports spots in Italy**: spots on a list or a map, wind forecasts from several models side by side, live wind from a weather station near each spot, logged sessions, automatically archived "study days", and push/email alerts when good wind is expected. The full brief is `docs/debrief.md`; this file summarizes it and records the decisions taken since. Non-commercial and **free to run**: free data sources, free hosting, no paid services.
 
 Work one phase at a time (see "Phases"), each on its own branch, merged via pull request; stop at the end of every phase so the user can test it. Ask before anything unclear or hard to undo, and do not add features the brief does not describe.
 
@@ -20,7 +20,7 @@ The technical foundation comes from the user's **Tornei** project (<https://gith
 
 - **Frontend**: React + Vite, TypeScript
 - **Backend**: Node.js (LTS, currently 24) + Express 5, TypeScript (ESM)
-- **Database**: MongoDB. Development: a container with data on a Docker volume (database `windfinder`). Production: its own database `windfinder` in the **same MongoDB Atlas free cluster as Tornei** (512 MB shared: keep documents compact), reached through `MONGODB_URI` in `.env`.
+- **Database**: MongoDB. Development: a container with data on a Docker volume (database `kitewind`). Production: its own database `kitewind` in the **same MongoDB Atlas free cluster as Tornei** (512 MB shared: keep documents compact), reached through `MONGODB_URI` in `.env`.
 - **ODM**: Mongoose
 - **Reverse proxy (production)**: Caddy. The production `web` image is Caddy serving the built client and proxying `/api/*` to the server, over plain HTTP behind Tornei's Caddy (see "Deploy").
 
@@ -36,9 +36,9 @@ The technical foundation comes from the user's **Tornei** project (<https://gith
 - Better Auth owns the `users`, `sessions`, `accounts` and `verifications` collections. `users` has the extra fields `surname` (required on email sign-up) and `role` (cannot be set by the client).
 - **Roles** are stored in the `roles` collection (`server/src/models/role.ts`); `user.role` holds the role's `name`: `admin`, `user` (default), created on startup by `ensureDefaultRoles()`. Use the `ROLES` constants, never string literals. `server/src/models/user.ts` is a Mongoose read model of `users`.
 - **Only the admin** creates, edits, verifies or deletes spots, chooses their stations, manages invites and changes global settings. Users do everything else (favorites, sessions, notification preferences).
-- **First admin** (nobody is invited at first): in mongosh insert an invite, sign up, then set the role. Development: `docker compose exec mongo mongosh windfinder`; production: `docker compose exec backup bash -c 'mongosh "$MONGODB_URI"'`. Then `db.invites.insertOne({ email: '...', createdAt: new Date(), updatedAt: new Date() })`, sign up and verify, and `db.users.updateOne({ email: '...' }, { $set: { role: 'admin' } })`.
+- **First admin** (nobody is invited at first): in mongosh insert an invite, sign up, then set the role. Development: `docker compose exec mongo mongosh kitewind`; production: `docker compose exec backup bash -c 'mongosh "$MONGODB_URI"'`. Then `db.invites.insertOne({ email: '...', createdAt: new Date(), updatedAt: new Date() })`, sign up and verify, and `db.users.updateOne({ email: '...' }, { $set: { role: 'admin' } })`.
 - `ensureAuthIndexes()` (`server/src/auth/indexes.ts`) creates Better Auth's indexes on startup, with TTL indexes deleting expired sessions and tokens.
-- Client IP (rate limiting, sessions): Better Auth reads `X-Forwarded-For`. Tornei's Caddy sets it to the connecting client; Wind Finder's Caddy trusts it from private addresses only (`trusted_proxies static private_ranges`) and is published on localhost only.
+- Client IP (rate limiting, sessions): Better Auth reads `X-Forwarded-For`. Tornei's Caddy sets it to the connecting client; KiteWind's Caddy trusts it from private addresses only (`trusted_proxies static private_ranges`) and is published on Docker's host address only (not the internet).
 
 ### Auth: still to do
 
@@ -157,10 +157,10 @@ Client: React Router (`client/src/App.tsx` defines routes; signed-in pages rende
 ## Deploy
 
 - **Target server**: the same Google Cloud free `e2-micro` VM as Tornei (1 GB RAM + swap). Every container has a memory limit in `docker-compose.prod.yml` (server 256 MB with a 160 MB Node heap, web 64 MB, backup 256 MB). Keep new services light.
-- **Front proxy**: Tornei's Caddy owns ports 80/443 and terminates HTTPS for both apps; Wind Finder's `web` serves plain HTTP on `127.0.0.1:${WEB_PORT:-8081}`. Proposed in `docs/deploy.md`: a site block for Wind Finder's domain in Tornei's Caddyfile proxying to `host.docker.internal:8081`. **Deferred** (user, 2026-10-29): development stays local for now; the Tornei change and the choice of domain will be made when it is time to go online.
-- **Before going online**: rename the app, because "Wind Finder" is too close to the existing Windfinder service (agreed with the user on 2026-10-29). The name lives in `APP_NAME` (`server/src/config.ts`), `t.app.name` (`client/src/i18n/en.ts`), `client/index.html`, `MAIL_FROM` defaults, the database name `windfinder`, the GHCR image names and `/opt/wind-finder`.
-- GitHub Actions: on every push runs lint, format check, typecheck, tests and build; on `main` it builds the Docker images and publishes them to GHCR (`ghcr.io/brets98/wind-finder-server`, `ghcr.io/brets98/wind-finder-web`, tagged `latest` and the commit SHA). The `deploy` job copies `docker-compose.prod.yml` to the VPS as `docker-compose.yml` in `VPS_DIR` and runs `docker compose pull && up -d` with `IMAGE_TAG` set to the commit SHA; it is skipped until the variables `VPS_HOST`, `VPS_USER`, `VPS_DIR` and the secrets `VPS_SSH_KEY`, `VPS_KNOWN_HOSTS` are set.
-- **Secrets in production live only on the VPS**, in `/opt/wind-finder/.env` (`chmod 600`). Images and CI never contain app secrets. Never put secrets in the client: `VITE_*` variables end up in the public bundle.
+- **Front proxy**: Tornei's Caddy owns ports 80/443 and terminates HTTPS for both apps; KiteWind's `web` serves plain HTTP on Docker's host address `172.17.0.1:${WEB_PORT:-8081}` (`WEB_HOST`; not the internet, and not 127.0.0.1, which Tornei's container can't reach), and a site block for KiteWind's domain in Tornei's Caddyfile proxies to `host.docker.internal:8081` (`docs/deploy.md`).
+- **Name and domain** (user, 2026-11-13): the app is **KiteWind** (renamed from "Wind Finder", too close to the Windfinder service), at **kitewind.duckdns.org** (DuckDNS, `A` record to the VM's IP). The name lives in `APP_NAME` (`server/src/config.ts`), `t.app.name` (`client/src/i18n/en.ts`), `client/index.html`, the manifest, `MAIL_FROM` defaults, the database name `kitewind`, the GHCR image names and `/opt/kitewind`. The GitHub repository is still `brets98/wind-finder`.
+- GitHub Actions: on every push runs lint, format check, typecheck, tests and build; on `main` it builds the Docker images and publishes them to GHCR (`ghcr.io/brets98/kitewind-server`, `ghcr.io/brets98/kitewind-web`, tagged `latest` and the commit SHA). The `deploy` job copies `docker-compose.prod.yml` to the VPS as `docker-compose.yml` in `VPS_DIR` and runs `docker compose pull && up -d` with `IMAGE_TAG` set to the commit SHA; it is skipped until the variables `VPS_HOST`, `VPS_USER`, `VPS_DIR` and the secrets `VPS_SSH_KEY`, `VPS_KNOWN_HOSTS` are set.
+- **Secrets in production live only on the VPS**, in `/opt/kitewind/.env` (`chmod 600`). Images and CI never contain app secrets. Never put secrets in the client: `VITE_*` variables end up in the public bundle.
 - **Backups**: the `backup` service runs `mongodump` against Atlas on start and every 24 hours into `./backups`, keeping `BACKUP_KEEP_DAYS` days (restore command in the compose file). Still to do: copy them off the server.
 
 ## Commands

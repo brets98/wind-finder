@@ -18,13 +18,13 @@ services:
       - path: .env
         required: false
     environment:
-      MONGODB_URI: mongodb://mongo:27017/windfinder
+      MONGODB_URI: mongodb://mongo:27017/kitewind
       BETTER_AUTH_URL: http://localhost:5174
       # Development-only fallback; production requires a real secret in .env
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-dev-only-secret-not-for-production-0123456789}
       SMTP_HOST: mailpit
       SMTP_PORT: 1025
-      MAIL_FROM: Wind Finder <no-reply@windfinder.local>
+      MAIL_FROM: KiteWind <no-reply@kitewind.local>
     ports:
       - '3001:3000'
     volumes:

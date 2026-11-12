@@ -1,5 +1,5 @@
 {
-  "name": "wind-finder-server",
+  "name": "kitewind-server",
   "version": "0.1.0",
   "private": true,
   "type": "module",

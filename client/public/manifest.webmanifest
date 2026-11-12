@@ -1,6 +1,6 @@
 {
-  "name": "Wind Finder",
-  "short_name": "Wind Finder",
+  "name": "KiteWind",
+  "short_name": "KiteWind",
   "description": "Kite spots in Italy: multi-model wind forecasts and live stations.",
   "start_url": "/",
   "scope": "/",
