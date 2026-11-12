@@ -1,36 +1,58 @@
 import { Router } from 'express';
 import { requireAdmin } from '../auth/middleware.js';
-import { getSettings } from '../models/settings.js';
+import { isClockTime } from '../domain/schedule.js';
+import { getSettings, type Settings } from '../models/settings.js';
 import { WindyStationModel } from '../models/windy-station.js';
 import type { StationService } from '../services/stations.js';
 
-/** Global settings: everyone reads the good-wind definition, only the admin changes it. */
+const serialize = (settings: Settings) => ({
+  goodWind: { minKnots: settings.goodWind.minKnots, minHours: settings.goodWind.minHours },
+  notifications: {
+    pushAt: settings.notifications.pushAt,
+    emailAt: settings.notifications.emailAt,
+  },
+});
+
+/**
+ * Global settings: everyone reads the good-wind definition and notification times, only the
+ * admin changes them (each group optional in a PATCH).
+ */
 export function settingsRouter(stations: StationService) {
   const router = Router();
 
   router.get('/', async (_req, res) => {
-    const settings = await getSettings();
-    res.json({ goodWind: settings.goodWind });
+    res.json(serialize(await getSettings()));
   });
 
   router.patch('/', requireAdmin, async (req, res) => {
-    const minKnots = Number(req.body?.goodWind?.minKnots);
-    const minHours = Number(req.body?.goodWind?.minHours);
+    const { goodWind, notifications } = req.body ?? {};
     const issues = [];
-    if (!Number.isFinite(minKnots) || minKnots < 1 || minKnots > 60) {
-      issues.push({ code: 'INVALID', field: 'minKnots' });
+    const minKnots = Number(goodWind?.minKnots);
+    const minHours = Number(goodWind?.minHours);
+    if (goodWind !== undefined) {
+      if (!Number.isFinite(minKnots) || minKnots < 1 || minKnots > 60) {
+        issues.push({ code: 'INVALID', field: 'minKnots' });
+      }
+      if (!Number.isInteger(minHours) || minHours < 1 || minHours > 24) {
+        issues.push({ code: 'INVALID', field: 'minHours' });
+      }
     }
-    if (!Number.isInteger(minHours) || minHours < 1 || minHours > 24) {
-      issues.push({ code: 'INVALID', field: 'minHours' });
+    if (notifications !== undefined) {
+      for (const field of ['pushAt', 'emailAt'] as const) {
+        if (!isClockTime(notifications?.[field])) issues.push({ code: 'INVALID', field });
+      }
     }
     if (issues.length) {
       res.status(400).json({ error: 'Invalid settings', issues });
       return;
     }
     const settings = await getSettings();
-    settings.goodWind = { minKnots, minHours };
+    if (goodWind !== undefined) settings.goodWind = { minKnots, minHours };
+    if (notifications !== undefined) {
+      settings.notifications = { pushAt: notifications.pushAt, emailAt: notifications.emailAt };
+    }
     await settings.save();
-    res.json({ goodWind: settings.goodWind });
+    res.json(serialize(settings));
   });
 
   /** Admin: the local copy of Windy's station catalogue. */

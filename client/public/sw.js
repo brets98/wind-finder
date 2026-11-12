@@ -1,7 +1,7 @@
 // Service worker: makes the app installable and opens it quickly. Built files (/assets/, with
 // hashed names) are served from the cache; pages try the network first and fall back to the
 // cached app when offline. The API is never cached: forecasts and live wind must be fresh.
-// Web Push (Phase 3) will be handled here too.
+// It also shows the daily push notification and opens the app when it is tapped.
 
 const CACHE = 'wind-finder-v1';
 const SHELL = ['/', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png'];
@@ -52,4 +52,28 @@ self.addEventListener('fetch', (event) => {
       ),
     );
   }
+});
+
+// The server sends { title, body, url } (server/src/services/notifications.ts)
+self.addEventListener('push', (event) => {
+  const data = event.data ? event.data.json() : {};
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: '/icon-192.png',
+      data: { url: data.url || '/' },
+    }),
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = event.notification.data.url;
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
+      const open = windows.find((w) => 'focus' in w);
+      if (open) return open.navigate(url).then((w) => (w || open).focus());
+      return self.clients.openWindow(url);
+    }),
+  );
 });

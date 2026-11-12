@@ -1,3 +1,5 @@
+import type { VapidKeys } from './services/notifications.js';
+
 function required(name: string): string {
   const value = process.env[name];
   if (!value) {
@@ -38,11 +40,15 @@ export interface Config {
     password?: string;
     from: string;
   };
+  /** Web Push (VAPID) keys; without them push notifications are off */
+  push?: VapidKeys;
 }
 
 export function loadConfig(): Config {
   const googleClientId = optional('GOOGLE_CLIENT_ID');
   const googleClientSecret = optional('GOOGLE_CLIENT_SECRET');
+  const vapidPublicKey = optional('VAPID_PUBLIC_KEY');
+  const vapidPrivateKey = optional('VAPID_PRIVATE_KEY');
 
   return {
     port: Number(process.env.PORT ?? 3000),
@@ -68,5 +74,13 @@ export function loadConfig(): Config {
       password: optional('SMTP_PASSWORD'),
       from: required('MAIL_FROM'),
     },
+    push:
+      vapidPublicKey && vapidPrivateKey
+        ? {
+            publicKey: vapidPublicKey,
+            privateKey: vapidPrivateKey,
+            subject: required('VAPID_SUBJECT'),
+          }
+        : undefined,
   };
 }

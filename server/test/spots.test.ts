@@ -199,7 +199,7 @@ describe('spots API', () => {
       const res = await agent.get(`/api/spots/${spot.id}/forecast`);
 
       expect(res.status).toBe(200);
-      expect(res.body.goodWind).toEqual({ minKnots: 14, minHours: 3 });
+      expect(res.body.goodWind).toEqual({ minKnots: 10, minHours: 1 });
       expect(
         res.body.models.map((m: { model: string; group: string }) => [m.model, m.group]),
       ).toEqual([

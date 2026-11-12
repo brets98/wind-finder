@@ -109,7 +109,11 @@ describe('Windy adapter', () => {
       }),
     );
 
-    const result = await windy.observations('pws-1', new Date('2026-10-28T00:00:00Z'));
+    const result = await windy.observations(
+      'pws-1',
+      new Date('2026-10-28T00:00:00Z'),
+      new Date('2026-10-29T10:00:00Z'),
+    );
 
     expect(result?.readings).toEqual([
       { time: '2026-10-29T08:30:00.000Z', wind: 7.8, gust: 11.7, dir: 55 },

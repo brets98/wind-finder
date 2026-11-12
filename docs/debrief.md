@@ -113,7 +113,7 @@ Use `createSchema()` for every collection. Keep domain logic in pure functions w
 Per user, a list of spot ids.
 
 ### Settings (global, admin)
-- **good wind**: minimum **14 knots** (editable), the spot's good directions, for at least **3 hours** (editable). This definition is used everywhere: list indicators, study days, notifications. Later it may become per user / per sport: keep it in one place.
+- **good wind**: minimum **10 knots** (editable), the spot's good directions, for at least **1 hour** (editable). (Originally 14 knots for 3 hours; lowered on 2026-11-13.) This definition is used everywhere: list indicators, study days, notifications. Later it may become per user / per sport: keep it in one place.
 - notification times (see section 9).
 
 ### User preferences

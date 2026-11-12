@@ -67,6 +67,9 @@ export function Layout({ user }: Props) {
                 </NavLink>
               </>
             )}
+            <NavLink to="/notifications" onClick={close}>
+              {t.menu.notifications}
+            </NavLink>
             <NavLink to="/account/password" onClick={close}>
               {t.menu.changePassword}
             </NavLink>

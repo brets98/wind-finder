@@ -3,6 +3,7 @@ import {
   estimateDayBytes,
   hourlyObserved,
   isDate,
+  studyDayReasons,
   isDayOver,
   meanDirection,
   observedReachable,
@@ -147,5 +148,33 @@ describe('parseSession', () => {
       fields: { rating: 5 },
       issues: [],
     });
+  });
+});
+
+describe('study day reasons', () => {
+  const spot = { goodDirections: [{ from: 30, to: 120 }], avoidDirections: [] };
+  const settings = { minKnots: 14, minHours: 3 };
+  const hours = Array.from({ length: 24 }, (_, i) =>
+    new Date(Date.UTC(2026, 6, 1, i)).toISOString(),
+  );
+  const series = (speeds: number[]) => ({
+    speed: hours.map((_, i) => speeds[i] ?? 0),
+    dir: hours.map(() => 60),
+  });
+  const readings = (wind: number, count: number) =>
+    hours.slice(10, 10 + count).map((time) => ({ time, wind, gust: null, dir: 60 }));
+
+  it('needs good wind for the minimum consecutive hours in a forecast or at the station', () => {
+    const good = series([0, 15, 15, 15]);
+    const short = series([0, 15, 15, 0, 15]);
+    expect(
+      studyDayReasons({ hours, forecasts: [short, good], readings: [] }, spot, settings),
+    ).toEqual(['auto_forecast']);
+    expect(
+      studyDayReasons({ hours, forecasts: [short], readings: readings(16, 3) }, spot, settings),
+    ).toEqual(['auto_observed']);
+    expect(
+      studyDayReasons({ hours, forecasts: [short], readings: readings(16, 2) }, spot, settings),
+    ).toEqual([]);
   });
 });

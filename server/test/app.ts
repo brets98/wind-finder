@@ -7,6 +7,7 @@ import type { Mail } from '../src/mail/mailer.js';
 import { InviteModel } from '../src/models/invite.js';
 import { UserModel } from '../src/models/user.js';
 import { createDayService } from '../src/services/days.js';
+import { createNotificationService } from '../src/services/notifications.js';
 import { createStationService } from '../src/services/stations.js';
 import { createArpav } from '../src/sources/arpav.js';
 import { createMeteoNetwork } from '../src/sources/meteonetwork.js';
@@ -17,12 +18,17 @@ import { createWindy } from '../src/sources/windy.js';
 
 export const BASE_URL = 'http://localhost:3000';
 
+/** A device that a fake push service treats as unsubscribed (answers 410). */
+export const GONE_ENDPOINT = 'https://push.example.com/gone';
+
 /**
- * Builds the app against the test database, capturing emails instead of sending them.
- * Sources use fake credentials: stub their HTTP calls with `stubFetch()` (test/fetch.ts).
+ * Builds the app against the test database, capturing emails and push messages instead of
+ * sending them. Sources use fake credentials: stub their HTTP calls with `stubFetch()`
+ * (test/fetch.ts).
  */
 export function createTestApp() {
   const mails: Mail[] = [];
+  const pushes: { endpoint: string; title: string; body: string; url: string }[] = [];
   const auth = createAuth({
     db: mongoose.connection.db!,
     config: { secret: 'test-secret-that-is-at-least-32-characters', baseUrl: BASE_URL },
@@ -39,7 +45,20 @@ export function createTestApp() {
     lombardia: createLombardia(undefined),
   });
   const days = createDayService(stations);
-  const app = createApp({ auth, stations, days });
+  const notifications = createNotificationService({
+    stations,
+    mailer: async (mail) => {
+      mails.push(mail);
+    },
+    push: async (subscription, payload) => {
+      if (subscription.endpoint === GONE_ENDPOINT) {
+        throw Object.assign(new Error('Gone'), { statusCode: 410 });
+      }
+      pushes.push({ endpoint: subscription.endpoint, ...JSON.parse(payload) });
+    },
+    appUrl: BASE_URL,
+  });
+  const app = createApp({ auth, stations, days, vapidPublicKey: 'test-vapid-public-key' });
 
   /** Path + query of the last link emailed to `to`. */
   function lastLink(to: string) {
@@ -50,7 +69,7 @@ export function createTestApp() {
     return pathname + search;
   }
 
-  return { app, auth, stations, days, mails, lastLink };
+  return { app, auth, stations, days, notifications, mails, pushes, lastLink };
 }
 
 export type TestApp = ReturnType<typeof createTestApp>;

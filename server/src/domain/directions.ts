@@ -25,3 +25,27 @@ export function inSector(direction: number, { from, to }: Sector): boolean {
 export function inAnySector(direction: number, sectors: Sector[]): boolean {
   return sectors.some((s) => inSector(direction, s));
 }
+
+const COMPASS = [
+  'N',
+  'NNE',
+  'NE',
+  'ENE',
+  'E',
+  'ESE',
+  'SE',
+  'SSE',
+  'S',
+  'SSW',
+  'SW',
+  'WSW',
+  'W',
+  'WNW',
+  'NW',
+  'NNW',
+];
+
+/** 16-point compass name of a direction in degrees (as `compassPoint()` in the client). */
+export function compassPoint(degrees: number): string {
+  return COMPASS[Math.round(normalizeDegrees(degrees) / 22.5) % 16];
+}

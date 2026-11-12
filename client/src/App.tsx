@@ -13,6 +13,7 @@ import { ChangePasswordPage } from './pages/ChangePasswordPage';
 import { HomePage } from './pages/HomePage';
 import { InvitesPage } from './pages/InvitesPage';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { NotificationsPage } from './pages/NotificationsPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { SessionFormPage } from './pages/SessionFormPage';
 import { SpotPage } from './pages/SpotPage';
@@ -50,6 +51,7 @@ export function App() {
           <Route path="sessions/:sessionId/edit" element={<SessionFormPage />} />
           <Route path="board" element={<BoardPage />} />
           <Route path="about" element={<AboutPage />} />
+          <Route path="notifications" element={<NotificationsPage />} />
           <Route path="account/password" element={<ChangePasswordPage email={user.email} />} />
           {isAdmin && (
             <>
