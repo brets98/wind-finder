@@ -5,9 +5,7 @@ import { localDate, localTime } from './time.js';
  * the server missed (it was down) still runs when the server is back, within `graceMinutes`
  * of its time when set (a late notification is worse than none), otherwise until midnight.
  */
-export type Schedule =
-  | { at: string; graceMinutes?: number }
-  | { everyMs: number };
+export type Schedule = { at: string; graceMinutes?: number } | { everyMs: number };
 
 const minutes = (hhmm: string) => {
   const [h, m] = hhmm.split(':').map(Number);

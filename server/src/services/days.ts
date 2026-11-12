@@ -1,5 +1,12 @@
 import type { HydratedDocument } from 'mongoose';
-import { hourlyObserved, isDayOver, observedReachable, type DayReason } from '../domain/day.js';
+import {
+  hourlyObserved,
+  isDayOver,
+  observedReachable,
+  studyDayReasons,
+  type DayReason,
+} from '../domain/day.js';
+import type { GoodWindSettings } from '../domain/good-wind.js';
 import { localHours } from '../domain/time.js';
 import { DayModel, type Day, type DayObserved, type ObservedReason } from '../models/day.js';
 import { SpotModel, type Spot } from '../models/spot.js';
@@ -11,6 +18,8 @@ export type DayDoc = HydratedDocument<Day>;
 
 /** A Day still missing data is completed again at most this often. */
 export const REFILL_MS = 30 * 60 * 1000;
+
+const DUPLICATE_KEY = 11000;
 
 const unavailable = (reason: ObservedReason, final: boolean): DayObserved => ({
   status: 'unavailable',
@@ -65,15 +74,11 @@ export function createDayService(stations: StationService) {
   }
 
   /**
-   * Completes a Day: both forecast runs of every model covering the spot (and waves for sea
-   * spots) until they are final, then the station's readings while they can still be fetched.
-   * Sources that fail leave the data missing; the next fill tries again.
+   * Fetches what a Day still misses, without saving it: both forecast runs of every model
+   * covering the spot (and waves for sea spots) until they are final, then the station's
+   * readings while they can still be fetched. Sources that fail leave the data missing.
    */
-  async function fill(day: DayDoc, spot: SpotDoc, now = new Date(), { force = false } = {}) {
-    const complete = day.forecastsFinal && day.observed.final;
-    const recent = day.filledAt && now.getTime() - day.filledAt.getTime() < REFILL_MS;
-    if (complete || (recent && !force)) return day;
-
+  async function collect(day: DayDoc, spot: SpotDoc, now: Date) {
     const hours = localHours(day.date);
     day.hours = hours.map((h) => new Date(h));
 
@@ -103,8 +108,15 @@ export function createDayService(stations: StationService) {
     }
 
     if (!day.observed.final) day.observed = await observe(spot, day.date, hours, now);
-
     day.filledAt = now;
+  }
+
+  /** Completes a Day and saves it; the next fill tries again what is still missing. */
+  async function fill(day: DayDoc, spot: SpotDoc, now = new Date(), { force = false } = {}) {
+    const complete = day.forecastsFinal && day.observed.final;
+    const recent = day.filledAt && now.getTime() - day.filledAt.getTime() < REFILL_MS;
+    if (complete || (recent && !force)) return day;
+    await collect(day, spot, now);
     await day.save();
     return day;
   }
@@ -119,7 +131,51 @@ export function createDayService(stations: StationService) {
     return fill(day, spot, now);
   }
 
-  return { ensureDay, fill };
+  /**
+   * The study-day check of a spot for a date that is over: its Day is saved (or completed)
+   * when the forecast predicted good wind or the station measured it, with the matching
+   * reasons. Without either, a Day that doesn't exist yet is not created (returns null).
+   */
+  async function studyDay(
+    spot: SpotDoc,
+    date: string,
+    settings: GoodWindSettings,
+    now = new Date(),
+  ) {
+    const existing = await DayModel.findOne({ spotId: spot._id, date });
+    const day = existing ?? new DayModel({ spotId: spot._id, date });
+    await collect(day, spot, now);
+    const o = day.observed;
+    const reasons = studyDayReasons(
+      {
+        hours: day.hours.map((h) => h.toISOString()),
+        forecasts: day.forecasts,
+        readings: o.times.map((t, i) => ({
+          time: t.toISOString(),
+          wind: o.wind[i] ?? null,
+          gust: o.gust[i] ?? null,
+          dir: o.dir[i] ?? null,
+        })),
+      },
+      spot,
+      settings,
+    );
+    if (!existing && reasons.length === 0) return null;
+    for (const reason of reasons) if (!day.reasons.includes(reason)) day.reasons.push(reason);
+    try {
+      await day.save();
+    } catch (err) {
+      // Created in the meantime (a session logged right now): add the reasons to that one
+      if ((err as { code?: number }).code !== DUPLICATE_KEY) throw err;
+      await DayModel.updateOne(
+        { spotId: spot._id, date },
+        { $addToSet: { reasons: { $each: reasons } } },
+      );
+    }
+    return day;
+  }
+
+  return { ensureDay, fill, studyDay };
 }
 
 export type DayService = ReturnType<typeof createDayService>;

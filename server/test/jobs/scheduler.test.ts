@@ -13,7 +13,9 @@ describe('scheduler', () => {
 
   it('runs a due job once and records the run', async () => {
     const run = vi.fn(async () => {});
-    const scheduler = createScheduler([{ name: 'evening', schedule: () => ({ at: '19:00' }), run }]);
+    const scheduler = createScheduler([
+      { name: 'evening', schedule: () => ({ at: '19:00' }), run },
+    ]);
 
     await scheduler.tick(at('17:00'));
     expect(run).not.toHaveBeenCalled();

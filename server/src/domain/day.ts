@@ -1,4 +1,5 @@
-import type { StationReading, Value } from '../sources/types.js';
+import type { ModelSeries, StationReading, Value } from '../sources/types.js';
+import { goodHours, longestRun, type GoodWindSettings, type SpotDirections } from './good-wind.js';
 import { addDays, localDate } from './time.js';
 
 /** Why a Day was saved; a Day can have several. */
@@ -84,4 +85,27 @@ export function estimateDayBytes({
 } = {}) {
   const elements = modelRuns * 3 * hours + readings * 4 + (marine ? 3 * hours : 0) + hours;
   return elements * 12 + 1024;
+}
+
+/**
+ * Why a study spot's day is worth saving: `auto_forecast` when any model, in either run,
+ * predicted good wind, `auto_observed` when the station measured it (hourly means). Both are
+ * checked, so that days the models under-predicted are kept too.
+ */
+export function studyDayReasons(
+  day: {
+    hours: string[];
+    forecasts: Pick<ModelSeries, 'speed' | 'dir'>[];
+    readings: StationReading[];
+  },
+  spot: SpotDirections,
+  settings: GoodWindSettings,
+): DayReason[] {
+  const isGood = (series: Pick<ModelSeries, 'speed' | 'dir'>) =>
+    longestRun(goodHours(series, spot, settings)) >= settings.minHours;
+  const observed = hourlyObserved(day.hours, day.readings);
+  const reasons: DayReason[] = [];
+  if (day.forecasts.some(isGood)) reasons.push('auto_forecast');
+  if (isGood({ speed: observed.wind, dir: observed.dir })) reasons.push('auto_observed');
+  return reasons;
 }
