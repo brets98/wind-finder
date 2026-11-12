@@ -40,7 +40,7 @@ describe('MeteoNetwork adapter', () => {
     });
     const headers = fetchMock.mock.calls[0][1]?.headers as Record<string, string>;
     expect(headers.Authorization).toBe('Bearer test-token');
-    expect(headers['User-Agent']).toMatch(/WindFinder/);
+    expect(headers['User-Agent']).toMatch(/KiteWind/);
   });
 
   it('treats "no results / license does not allow" as a station that is not usable', async () => {

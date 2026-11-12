@@ -3,7 +3,7 @@
 // cached app when offline. The API is never cached: forecasts and live wind must be fresh.
 // It also shows the daily push notification and opens the app when it is tapped.
 
-const CACHE = 'wind-finder-v1';
+const CACHE = 'kitewind-v1';
 const SHELL = ['/', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', (event) => {

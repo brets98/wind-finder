@@ -12,7 +12,7 @@ x-logging: &logging
 
 services:
   server:
-    image: ghcr.io/brets98/wind-finder-server:${IMAGE_TAG:-latest}
+    image: ghcr.io/brets98/kitewind-server:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: docker/server.Dockerfile
@@ -58,7 +58,7 @@ services:
     command:
       - |
         while true; do
-          file="/backups/wind-finder-$$(date +%Y%m%d-%H%M%S).archive.gz"
+          file="/backups/kitewind-$$(date +%Y%m%d-%H%M%S).archive.gz"
           if mongodump --uri="$$MONGODB_URI" --gzip --archive="$$file" --quiet; then
             echo "Backup written: $$file"
           else
@@ -67,12 +67,12 @@ services:
             sleep 300
             continue
           fi
-          find /backups -name 'wind-finder-*.archive.gz' -mtime +"$$BACKUP_KEEP_DAYS" -delete
+          find /backups -name 'kitewind-*.archive.gz' -mtime +"$$BACKUP_KEEP_DAYS" -delete
           sleep 86400
         done
 
   web:
-    image: ghcr.io/brets98/wind-finder-web:${IMAGE_TAG:-latest}
+    image: ghcr.io/brets98/kitewind-web:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: docker/web.Dockerfile

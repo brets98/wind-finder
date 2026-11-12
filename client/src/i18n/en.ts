@@ -3,7 +3,7 @@
  * `{name}` placeholders are filled by `fill()`.
  */
 export const en = {
-  app: { name: 'Wind Finder' },
+  app: { name: 'KiteWind' },
   language: { label: 'Language', en: 'English' },
   common: {
     loading: 'Loading…',
@@ -182,7 +182,7 @@ export const en = {
   about: {
     title: 'About & data sources',
     intro:
-      'Wind Finder is a personal, non-commercial app. It uses only free and open data, credited below.',
+      'KiteWind is a personal, non-commercial app. It uses only free and open data, credited below.',
     forecasts: 'Forecasts',
     forecastsText:
       'Weather data by Open-Meteo.com (CC BY 4.0), from the national weather services that run each model.',

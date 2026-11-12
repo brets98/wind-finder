@@ -1,6 +1,6 @@
 # Deploy next to Tornei on the free Google Cloud VM
 
-Wind Finder runs on the **same e2-micro VM as Tornei** (1 GB RAM + 2 GB swap) and uses a
+KiteWind runs on the **same e2-micro VM as Tornei** (1 GB RAM + 2 GB swap) and uses a
 separate database in the **same MongoDB Atlas free cluster**. The VM itself (Docker, swap,
 `deploy` user, SMTP, budget alert) is already set up by Tornei's
 [`docs/deploy-gcp.md`](https://github.com/brets98/tornei/blob/main/docs/deploy-gcp.md):
@@ -8,26 +8,27 @@ this guide only covers what is different.
 
 ## How the two apps share ports 80/443
 
-Tornei's `web` container (Caddy) already owns ports 80 and 443. Wind Finder's `web`
+Tornei's `web` container (Caddy) already owns ports 80 and 443. KiteWind's `web`
 container is also Caddy, but it serves **plain HTTP on `127.0.0.1:8081`** (`WEB_PORT`) and
 never faces the internet. Tornei's Caddy stays the only front door: it gets the HTTPS
-certificate for Wind Finder's domain too and forwards that domain to `8081`.
+certificate for KiteWind's domain too and forwards that domain to `8081`.
 
 ```
 internet ──443──▶ Tornei's Caddy ─┬─ tornei.example.com ──▶ Tornei (server, client)
-                                  └─ wind.example.com ──▶ 127.0.0.1:8081 ──▶ Wind Finder's Caddy
+                                  └─ kitewind.duckdns.org ──▶ 127.0.0.1:8081 ──▶ KiteWind's Caddy
                                                                               ├─ /api/* ▶ server
                                                                               └─ client files
 ```
 
 Why this way: the two compose projects stay independent (no shared Docker network that
 must exist before either starts), each app keeps its own images and release cycle, and
-Wind Finder can be checked on the VM with `curl http://127.0.0.1:8081/api/health`.
-Wind Finder's Caddy trusts the `X-Forwarded-For` sent from private addresses, so Better Auth
+KiteWind can be checked on the VM with `curl http://127.0.0.1:8081/api/health`.
+KiteWind's Caddy trusts the `X-Forwarded-For` sent from private addresses, so Better Auth
 still sees the real client IP.
 
-**Domain**: a separate domain or a subdomain (e.g. `wind.<your domain>`), to be decided.
-Point its DNS `A` record to the VM's IP.
+**Domain**: `kitewind.duckdns.org` (DuckDNS, free; chosen on 2026-11-13). On
+<https://www.duckdns.org>, set its IP to the VM's external IP (`34.23.26.175`). If that IP ever
+changes, update it there too, as for Tornei's domain.
 
 ### Change needed in Tornei (not done yet: needs approval)
 
@@ -49,7 +50,7 @@ Two small changes in the Tornei repository:
    `environment`, and `extra_hosts: ['host.docker.internal:host-gateway']` so the
    container can reach the VM's localhost port.
 
-Then `WIND_DOMAIN=wind.<your domain>` in Tornei's `.env` on the VM.
+Then `WIND_DOMAIN=kitewind.duckdns.org` in Tornei's `.env` on the VM.
 
 ## Memory
 
@@ -59,25 +60,25 @@ capped at 160 MB), web 64 MB, backup 256 MB. Keep new services light; check with
 
 ## Steps
 
-1. **Folder**, on the VM: `sudo mkdir -p /opt/wind-finder && sudo chown deploy: /opt/wind-finder`.
+1. **Folder**, on the VM: `sudo mkdir -p /opt/kitewind && sudo chown deploy: /opt/kitewind`.
 2. **Database**: in Atlas, the same cluster as Tornei. The existing database user works if it
    has _Read and write to any database_; otherwise create one. The VM's IP is already in
    **Network Access**. The database name goes after the host:
-   `…mongodb.net/windfinder?retryWrites=true&w=majority`.
-3. **`.env`**: as `deploy`, create `/opt/wind-finder/.env` from [`.env.example`](../.env.example),
+   `…mongodb.net/kitewind?retryWrites=true&w=majority`.
+3. **`.env`**: as `deploy`, create `/opt/kitewind/.env` from [`.env.example`](../.env.example),
    then `chmod 600 .env`. A new `BETTER_AUTH_SECRET` (`openssl rand -hex 32`), not Tornei's.
-   SMTP values can be the same as Tornei's, with a `MAIL_FROM` naming Wind Finder.
-4. **Images**: after the first merge to `main`, make the packages `wind-finder-server` and
-   `wind-finder-web` public on GitHub (or `docker login ghcr.io` on the VM).
+   SMTP values can be the same as Tornei's, with a `MAIL_FROM` naming KiteWind.
+4. **Images**: after the first merge to `main`, make the packages `kitewind-server` and
+   `kitewind-web` public on GitHub (or `docker login ghcr.io` on the VM).
 5. **GitHub settings** (this repository, **Settings → Secrets and variables → Actions**):
-   variables `VPS_HOST`, `VPS_USER` = `deploy`, `VPS_DIR` = `/opt/wind-finder`; secrets
+   variables `VPS_HOST`, `VPS_USER` = `deploy`, `VPS_DIR` = `/opt/kitewind`; secrets
    `VPS_SSH_KEY` and `VPS_KNOWN_HOSTS`, the same values as Tornei's. The next push to `main`
    deploys.
 6. **Front proxy**: the Tornei change above, then `docker compose up -d` in Tornei's folder.
 7. **First admin** (registration is invite-only, and nobody is invited yet), as `deploy`:
 
    ```bash
-   cd /opt/wind-finder
+   cd /opt/kitewind
    docker compose exec backup bash -c 'mongosh "$MONGODB_URI"'
    # at the prompt: invite yourself
    db.invites.insertOne({ email: '<your email>', createdAt: new Date(), updatedAt: new Date() })
@@ -94,5 +95,5 @@ capped at 160 MB), web 64 MB, backup 256 MB. Keep new services light; check with
 
 - Every merge to `main` deploys automatically.
 - Logs: `docker compose logs -f server`. Status: `docker compose ps`.
-- Backups land in `/opt/wind-finder/backups` every day; copy them off the server now and then.
+- Backups land in `/opt/kitewind/backups` every day; copy them off the server now and then.
 - The Atlas free tier (512 MB) is shared with Tornei: check the cluster size in Atlas now and then.

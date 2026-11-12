@@ -13,7 +13,7 @@ function optional(name: string): string | undefined {
 }
 
 /** Shown in emails; the client has its own copy in `client/src/i18n/en.ts`. */
-export const APP_NAME = 'Wind Finder';
+export const APP_NAME = 'KiteWind';
 
 export interface Config {
   port: number;

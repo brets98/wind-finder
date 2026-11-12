@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { dictionaries, I18nContext, LANGUAGES, locales, type Language } from './context';
 
-const STORAGE_KEY = 'wind-finder.language';
+const STORAGE_KEY = 'kitewind.language';
 
 /** The language chosen before on this browser, otherwise the browser's own, otherwise the first. */
 function preferredLanguage(): Language {
