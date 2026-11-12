@@ -30,3 +30,15 @@ export function localHours(date: string): string[] {
   }
   return hours;
 }
+
+const timeFormat = new Intl.DateTimeFormat('en-GB', {
+  timeZone: TIME_ZONE,
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+});
+
+/** Local time ("HH:mm", 24 hours) in Europe/Rome of an instant. */
+export function localTime(instant: Date | string): string {
+  return timeFormat.format(typeof instant === 'string' ? new Date(instant) : instant);
+}
