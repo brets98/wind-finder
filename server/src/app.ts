@@ -7,6 +7,7 @@ import { daysRouter } from './routes/days.js';
 import { healthRouter } from './routes/health.js';
 import { invitesRouter } from './routes/invites.js';
 import { preferencesRouter } from './routes/preferences.js';
+import { pushRouter } from './routes/push.js';
 import { sessionsRouter } from './routes/sessions.js';
 import { settingsRouter } from './routes/settings.js';
 import { spotsRouter } from './routes/spots.js';
@@ -18,10 +19,13 @@ export function createApp({
   auth,
   stations,
   days,
+  vapidPublicKey = null,
 }: {
   auth: Auth;
   stations: StationService;
   days: DayService;
+  /** Web Push public key; null when push is off */
+  vapidPublicKey?: string | null;
 }) {
   const app = express();
 
@@ -43,6 +47,7 @@ export function createApp({
   app.use('/api', daysRouter(days));
   app.use('/api/settings', settingsRouter(stations));
   app.use('/api/me/preferences', preferencesRouter);
+  app.use('/api/push', pushRouter(vapidPublicKey));
 
   app.use(errorHandler);
 

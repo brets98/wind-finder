@@ -33,6 +33,12 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       MAIL_FROM: ${MAIL_FROM:?}
+      METEONETWORK_TOKEN: ${METEONETWORK_TOKEN:-}
+      WINDY_API_KEY: ${WINDY_API_KEY:-}
+      LOMBARDIA_APP_TOKEN: ${LOMBARDIA_APP_TOKEN:-}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-}
 
   # Dumps the Atlas database to ./backups now and then every 24 hours, keeping BACKUP_KEEP_DAYS days
   # (Atlas' free tier keeps no backups of its own). The image also has mongosh for admin tasks.

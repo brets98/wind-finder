@@ -1,26 +1,32 @@
 import { Router } from 'express';
-import { PreferencesModel, UNITS, type Unit } from '../models/preferences.js';
+import { DEFAULT_PREFERENCES, PreferencesModel, UNITS } from '../models/preferences.js';
 
 /** The signed-in user's own preferences. */
 export const preferencesRouter = Router();
 
-const DEFAULTS = { unit: 'knots' as Unit };
-
 preferencesRouter.get('/', async (req, res) => {
   const prefs = await PreferencesModel.findOne({ userId: req.user!.id });
-  res.json({ unit: prefs?.unit ?? DEFAULTS.unit });
+  res.json({
+    unit: prefs?.unit ?? DEFAULT_PREFERENCES.unit,
+    email: prefs?.email ?? DEFAULT_PREFERENCES.email,
+  });
 });
 
 preferencesRouter.patch('/', async (req, res) => {
-  const { unit } = req.body ?? {};
-  if (unit !== undefined && !UNITS.includes(unit)) {
-    res.status(400).json({ error: 'Invalid unit', issues: [{ code: 'INVALID', field: 'unit' }] });
+  const { unit, email } = req.body ?? {};
+  const issues = [];
+  if (unit !== undefined && !UNITS.includes(unit)) issues.push({ code: 'INVALID', field: 'unit' });
+  if (email !== undefined && typeof email !== 'boolean') {
+    issues.push({ code: 'INVALID', field: 'email' });
+  }
+  if (issues.length) {
+    res.status(400).json({ error: 'Invalid preferences', issues });
     return;
   }
   const prefs = await PreferencesModel.findOneAndUpdate(
     { userId: req.user!.id },
-    unit === undefined ? {} : { unit },
+    { ...(unit === undefined ? {} : { unit }), ...(email === undefined ? {} : { email }) },
     { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true },
   );
-  res.json({ unit: prefs.unit });
+  res.json({ unit: prefs.unit, email: prefs.email });
 });

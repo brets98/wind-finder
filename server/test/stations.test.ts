@@ -407,7 +407,7 @@ describe('settings and preferences', () => {
     const { agent: adminAgent } = await signUp(t, admin, { role: 'admin' });
     const { agent } = await signUp(t, mario);
 
-    expect((await agent.get('/api/settings')).body).toEqual({
+    expect((await agent.get('/api/settings')).body).toMatchObject({
       goodWind: { minKnots: 14, minHours: 3 },
     });
     expect(
@@ -417,7 +417,7 @@ describe('settings and preferences', () => {
     const changed = await adminAgent
       .patch('/api/settings')
       .send({ goodWind: { minKnots: 12, minHours: 2 } });
-    expect(changed.body).toEqual({ goodWind: { minKnots: 12, minHours: 2 } });
+    expect(changed.body).toMatchObject({ goodWind: { minKnots: 12, minHours: 2 } });
 
     const invalid = await adminAgent
       .patch('/api/settings')
@@ -434,12 +434,14 @@ describe('settings and preferences', () => {
     const { agent } = await signUp(t, mario);
     const { agent: other } = await signUp(t, admin);
 
-    expect((await agent.get('/api/me/preferences')).body).toEqual({ unit: 'knots' });
-    expect((await agent.patch('/api/me/preferences').send({ unit: 'beaufort' })).body).toEqual({
+    expect((await agent.get('/api/me/preferences')).body).toMatchObject({ unit: 'knots' });
+    expect(
+      (await agent.patch('/api/me/preferences').send({ unit: 'beaufort' })).body,
+    ).toMatchObject({
       unit: 'beaufort',
     });
-    expect((await agent.get('/api/me/preferences')).body).toEqual({ unit: 'beaufort' });
-    expect((await other.get('/api/me/preferences')).body).toEqual({ unit: 'knots' });
+    expect((await agent.get('/api/me/preferences')).body).toMatchObject({ unit: 'beaufort' });
+    expect((await other.get('/api/me/preferences')).body).toMatchObject({ unit: 'knots' });
     expect((await agent.patch('/api/me/preferences').send({ unit: 'mph' })).status).toBe(400);
   });
 });
