@@ -2,7 +2,7 @@
 # Runs on the same 1 GB VM as Tornei (Google Cloud's free e2-micro, with swap): every container
 # has a memory limit and rotated logs. The database is MongoDB Atlas (MONGODB_URI in .env).
 # Ports 80/443 belong to Tornei's Caddy, which serves HTTPS and forwards this app's domain to
-# the web container on 127.0.0.1:WEB_PORT (see docs/deploy.md).
+# the web container on Docker's host address, 172.17.0.1:WEB_PORT (see docs/deploy.md).
 
 x-logging: &logging
   driver: json-file
@@ -81,7 +81,8 @@ services:
     logging: *logging
     mem_limit: 64m
     ports:
-      # Localhost only: reached through the front proxy, never directly from the internet
-      - '127.0.0.1:${WEB_PORT:-8081}:80'
+      # On Docker's host address (docker0), not on the internet: Tornei's Caddy reaches it as
+      # host.docker.internal (host-gateway). 127.0.0.1 would not do: that is the container's own.
+      - '${WEB_HOST:-172.17.0.1}:${WEB_PORT:-8081}:80'
     depends_on:
       - server

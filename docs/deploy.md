@@ -9,20 +9,22 @@ this guide only covers what is different.
 ## How the two apps share ports 80/443
 
 Tornei's `web` container (Caddy) already owns ports 80 and 443. KiteWind's `web`
-container is also Caddy, but it serves **plain HTTP on `127.0.0.1:8081`** (`WEB_PORT`) and
+container is also Caddy, but it serves **plain HTTP on `172.17.0.1:8081`** (Docker's host address `docker0`; `WEB_HOST`, `WEB_PORT`) and
 never faces the internet. Tornei's Caddy stays the only front door: it gets the HTTPS
 certificate for KiteWind's domain too and forwards that domain to `8081`.
 
 ```
 internet ──443──▶ Tornei's Caddy ─┬─ tornei.example.com ──▶ Tornei (server, client)
-                                  └─ kitewind.duckdns.org ──▶ 127.0.0.1:8081 ──▶ KiteWind's Caddy
+                                  └─ kitewind.duckdns.org ──▶ 172.17.0.1:8081 ──▶ KiteWind's Caddy
                                                                               ├─ /api/* ▶ server
                                                                               └─ client files
 ```
 
 Why this way: the two compose projects stay independent (no shared Docker network that
 must exist before either starts), each app keeps its own images and release cycle, and
-KiteWind can be checked on the VM with `curl http://127.0.0.1:8081/api/health`.
+KiteWind can be checked on the VM with `curl http://172.17.0.1:8081/api/health`. Not
+`127.0.0.1`: from inside Tornei's container that is the container itself, while
+`host.docker.internal` (`host-gateway`) is the host's `docker0` address, 172.17.0.1.
 KiteWind's Caddy trusts the `X-Forwarded-For` sent from private addresses, so Better Auth
 still sees the real client IP.
 
@@ -48,7 +50,7 @@ Two small changes in the Tornei repository:
 
 2. `docker-compose.prod.yml`, on the `web` service: `WIND_DOMAIN: ${WIND_DOMAIN:-}` in
    `environment`, and `extra_hosts: ['host.docker.internal:host-gateway']` so the
-   container can reach the VM's localhost port.
+   container can reach KiteWind's port on the host.
 
 Then `WIND_DOMAIN=kitewind.duckdns.org` in Tornei's `.env` on the VM.
 
