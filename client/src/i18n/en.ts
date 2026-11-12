@@ -63,6 +63,8 @@ export const en = {
     windy: 'Windy stations',
     metar: 'Airport METAR',
     arpav: 'ARPAV Veneto',
+    meteotrentino: 'Meteotrentino',
+    lombardia: 'ARPA Lombardia',
   },
   models: {
     italia_meteo_arpae_icon_2i: 'ICON-2I (ItaliaMeteo, 2 km)',
@@ -189,6 +191,9 @@ export const en = {
       'Airport weather reports (METAR) from the NOAA Aviation Weather Center (public domain).',
     arpavText:
       'Data from the ARPAV (Veneto regional environmental agency) weather stations, CC BY 4.0, not validated.',
+    meteotrentinoText:
+      'Recent data of the Meteotrentino automatic stations (Provincia autonoma di Trento), CC BY 4.0, not validated.',
+    lombardiaText: 'Weather sensors of ARPA Lombardia on Open Data Lombardia, public domain (CC0).',
     windyText:
       'Open-data personal weather stations shared on Windy.com by their owners, under their open license.',
     maps: 'Maps and spots',
@@ -234,7 +239,8 @@ export const en = {
       clear: 'Remove',
       notes: 'Notes about the station',
       saveNotes: 'Save notes',
-      suggestions: 'Stations within 20 km (Windy, airport METAR, ARPAV)',
+      suggestions:
+        'Stations within 20 km (Windy, airport METAR, ARPAV, Meteotrentino, ARPA Lombardia)',
       showUnusable: 'Show stations that cannot be used',
       noSuggestions: 'No usable station within 20 km.',
       catalogue: 'Windy station list: {count} Italian stations, updated {date}.',

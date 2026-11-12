@@ -30,7 +30,14 @@ export interface MarineForecast {
   waveDir: Value[];
 }
 
-export const STATION_SOURCES = ['meteonetwork', 'windy', 'metar', 'arpav'] as const;
+export const STATION_SOURCES = [
+  'meteonetwork',
+  'windy',
+  'metar',
+  'arpav',
+  'meteotrentino',
+  'lombardia',
+] as const;
 export type StationSource = (typeof STATION_SOURCES)[number];
 
 export interface StationInfo {

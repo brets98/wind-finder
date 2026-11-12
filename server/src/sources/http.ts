@@ -115,3 +115,15 @@ export function num(value: unknown): number | null {
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
 }
+
+/**
+ * A local time in "solar time" (UTC+1 all year, used by Italian regional networks), written
+ * "YYYY-MM-DDTHH:mm[:ss]" without a zone, as an ISO UTC string. And back, for queries.
+ */
+export function solarToUtc(local: string): string {
+  return new Date(Date.parse(`${local.slice(0, 19)}Z`) - 3_600_000).toISOString();
+}
+
+export function utcToSolar(instant: Date): string {
+  return new Date(instant.getTime() + 3_600_000).toISOString().slice(0, 19);
+}
