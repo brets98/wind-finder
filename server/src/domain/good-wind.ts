@@ -12,7 +12,7 @@ export interface GoodWindSettings {
   minHours: number;
 }
 
-export const DEFAULT_GOOD_WIND: GoodWindSettings = { minKnots: 14, minHours: 3 };
+export const DEFAULT_GOOD_WIND: GoodWindSettings = { minKnots: 10, minHours: 1 };
 
 export interface SpotDirections {
   goodDirections: Sector[];

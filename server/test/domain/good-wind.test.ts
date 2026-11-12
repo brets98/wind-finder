@@ -1,23 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import {
-  dayIndicator,
-  DEFAULT_GOOD_WIND,
-  goodHours,
-  isGoodHour,
-  longestRun,
-} from '../../src/domain/good-wind.js';
+import { dayIndicator, goodHours, isGoodHour, longestRun } from '../../src/domain/good-wind.js';
 import type { Forecast, ModelSeries } from '../../src/sources/types.js';
 
 // Bora at Sottomarina: good from NE-E, offshore from W
 const spot = { goodDirections: [{ from: 30, to: 120 }], avoidDirections: [{ from: 240, to: 300 }] };
 
+// Stricter than the defaults, so that the thresholds show in the cases below
+const settings = { minKnots: 14, minHours: 3 };
+
 describe('good wind', () => {
   it('needs enough wind from a good direction', () => {
-    expect(isGoodHour(14, 60, spot, DEFAULT_GOOD_WIND)).toBe(true);
-    expect(isGoodHour(13.9, 60, spot, DEFAULT_GOOD_WIND)).toBe(false);
-    expect(isGoodHour(20, 180, spot, DEFAULT_GOOD_WIND)).toBe(false);
-    expect(isGoodHour(null, 60, spot, DEFAULT_GOOD_WIND)).toBe(false);
-    expect(isGoodHour(20, null, spot, DEFAULT_GOOD_WIND)).toBe(false);
+    expect(isGoodHour(14, 60, spot, settings)).toBe(true);
+    expect(isGoodHour(13.9, 60, spot, settings)).toBe(false);
+    expect(isGoodHour(20, 180, spot, settings)).toBe(false);
+    expect(isGoodHour(null, 60, spot, settings)).toBe(false);
+    expect(isGoodHour(20, null, spot, settings)).toBe(false);
   });
 
   it('never counts a direction to avoid, even inside a good sector', () => {
@@ -25,15 +22,15 @@ describe('good wind', () => {
       goodDirections: [{ from: 200, to: 320 }],
       avoidDirections: [{ from: 250, to: 270 }],
     };
-    expect(isGoodHour(20, 220, overlapping, DEFAULT_GOOD_WIND)).toBe(true);
-    expect(isGoodHour(20, 260, overlapping, DEFAULT_GOOD_WIND)).toBe(false);
+    expect(isGoodHour(20, 220, overlapping, settings)).toBe(true);
+    expect(isGoodHour(20, 260, overlapping, settings)).toBe(false);
   });
 
   it('flags each hour and finds the longest good run', () => {
     const flags = goodHours(
       { speed: [15, 16, 10, 18, 19, 20], dir: [60, 60, 60, 90, 90, 90] },
       spot,
-      DEFAULT_GOOD_WIND,
+      settings,
     );
     expect(flags).toEqual([true, true, false, true, true, true]);
     expect(longestRun(flags)).toBe(3);
@@ -63,30 +60,16 @@ describe('day indicator', () => {
 
   it('says yes when at least half of the models predict good wind', () => {
     expect(
-      dayIndicator(
-        forecast(model('a', 4), model('b', 3), model('c', 0)),
-        date,
-        spot,
-        DEFAULT_GOOD_WIND,
-      ),
+      dayIndicator(forecast(model('a', 4), model('b', 3), model('c', 0)), date, spot, settings),
     ).toBe('yes');
-    expect(
-      dayIndicator(forecast(model('a', 4), model('b', 0)), date, spot, DEFAULT_GOOD_WIND),
-    ).toBe('yes');
+    expect(dayIndicator(forecast(model('a', 4), model('b', 0)), date, spot, settings)).toBe('yes');
   });
 
   it('says maybe when only a minority does, no when none does', () => {
     expect(
-      dayIndicator(
-        forecast(model('a', 4), model('b', 2), model('c', 0)),
-        date,
-        spot,
-        DEFAULT_GOOD_WIND,
-      ),
+      dayIndicator(forecast(model('a', 4), model('b', 2), model('c', 0)), date, spot, settings),
     ).toBe('maybe');
-    expect(
-      dayIndicator(forecast(model('a', 2), model('b', 0)), date, spot, DEFAULT_GOOD_WIND),
-    ).toBe('no');
+    expect(dayIndicator(forecast(model('a', 2), model('b', 0)), date, spot, settings)).toBe('no');
   });
 
   it('respects the editable thresholds', () => {
@@ -99,15 +82,15 @@ describe('day indicator', () => {
 
   it('ignores models with no data for that day, and says nothing without any', () => {
     // Model b's run ends before that day
-    expect(
-      dayIndicator(forecast(model('a', 4), model('b', 4, 1)), date, spot, DEFAULT_GOOD_WIND),
-    ).toBe('yes');
-    expect(dayIndicator(forecast(model('b', 4, 1)), date, spot, DEFAULT_GOOD_WIND)).toBeNull();
-    expect(dayIndicator(forecast(model('a', 4)), '2026-11-05', spot, DEFAULT_GOOD_WIND)).toBeNull();
+    expect(dayIndicator(forecast(model('a', 4), model('b', 4, 1)), date, spot, settings)).toBe(
+      'yes',
+    );
+    expect(dayIndicator(forecast(model('b', 4, 1)), date, spot, settings)).toBeNull();
+    expect(dayIndicator(forecast(model('a', 4)), '2026-11-05', spot, settings)).toBeNull();
   });
 
   it('says nothing for a spot without good directions', () => {
     const noDirections = { goodDirections: [], avoidDirections: [] };
-    expect(dayIndicator(forecast(model('a', 4)), date, noDirections, DEFAULT_GOOD_WIND)).toBeNull();
+    expect(dayIndicator(forecast(model('a', 4)), date, noDirections, settings)).toBeNull();
   });
 });

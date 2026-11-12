@@ -128,7 +128,7 @@ describe('notifications', () => {
       const times = { notifications: { pushAt: '18:30', emailAt: '20:00' } };
       expect((await user.agent.patch('/api/settings').send(times)).status).toBe(403);
       const res = await admin.agent.patch('/api/settings').send(times);
-      expect(res.body).toMatchObject({ ...times, goodWind: { minKnots: 14, minHours: 3 } });
+      expect(res.body).toMatchObject({ ...times, goodWind: { minKnots: 10, minHours: 1 } });
 
       const bad = await admin.agent
         .patch('/api/settings')

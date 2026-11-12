@@ -408,7 +408,7 @@ describe('settings and preferences', () => {
     const { agent } = await signUp(t, mario);
 
     expect((await agent.get('/api/settings')).body).toMatchObject({
-      goodWind: { minKnots: 14, minHours: 3 },
+      goodWind: { minKnots: 10, minHours: 1 },
     });
     expect(
       (await agent.patch('/api/settings').send({ goodWind: { minKnots: 12, minHours: 2 } })).status,
